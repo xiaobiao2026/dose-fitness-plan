@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="输入身高、体重、腰围与目标，自动生成每日热量、三餐份量、训练动作与参考负荷。">
+<title>剂量 DOSE · 数据驱动的减脂增肌计划</title>
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* ===== 01 token ===== */
+:root{
+  --paper:#F2F1EC;--paper-2:#E7E5DD;--card:#FBFAF6;
+  --ink:#171A16;--graphite:#4B4F46;--muted:#8B8C82;
+  --line:#D8D5CB;--line-d:#B7B5A9;
+  --accent:#DCEE4B;--accent-deep:#B9CE22;--warn:#C4472A;
+  --radius:2px;
+  --sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-feature-settings:"tnum" 1;letter-spacing:-.01em}
+.wrap{width:min(1240px,calc(100% - 96px));margin:0 auto}
+.tnum{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ===== 02 页头 + 数据条 ===== */
+.site-head{position:sticky;top:0;z-index:70;background:rgba(242,241,236,.9);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.head-inner{display:flex;align-items:center;gap:32px;height:68px}
+.brand{display:flex;align-items:center;gap:11px;flex:none}
+.brand-mark{width:30px;height:30px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:var(--mono);font-size:15px;font-weight:600;border-radius:var(--radius)}
+.brand-text{display:flex;align-items:baseline;gap:8px;font-weight:700;font-size:17px;letter-spacing:.02em}
+.brand-text em{font-family:var(--mono);font-style:normal;font-size:9.5px;font-weight:500;letter-spacing:.22em;color:var(--muted)}
+.nav{display:flex;align-items:center;gap:2px;margin-left:auto}
+.nav a{position:relative;padding:8px 11px;font-size:13.5px;color:var(--graphite);font-weight:500;border-radius:var(--radius);transition:color .18s,background .18s;white-space:nowrap}
+.nav a:hover{color:var(--ink);background:rgba(23,26,22,.05)}
+.nav a[aria-current="true"]{color:var(--ink);font-weight:700}
+.nav a[aria-current="true"]::after{content:"";position:absolute;left:11px;right:11px;bottom:2px;height:2px;background:var(--ink)}
+.menu-btn{display:none;width:40px;height:40px;background:none;border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;place-items:center;margin-left:auto}
+.menu-btn span{display:block;width:16px;height:1.5px;background:var(--ink);margin:3px 0}
+
+.databar{border-bottom:1px solid var(--line);background:var(--paper-2)}
+.db-inner{display:flex;align-items:center;gap:0;height:44px;overflow-x:auto;scrollbar-width:none}
+.db-inner::-webkit-scrollbar{display:none}
+.db-cell{display:flex;align-items:baseline;gap:6px;padding:0 18px;border-right:1px solid rgba(23,26,22,.12);white-space:nowrap;flex:none}
+.db-cell:first-child{padding-left:0}
+.db-k{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--muted)}
+.db-v{font-family:var(--mono);font-size:13px;font-weight:600}
+.db-u{font-family:var(--mono);font-size:9px;color:var(--muted)}
+.db-cell.is-key .db-v{color:var(--ink);background:var(--accent);padding:1px 6px}
+.db-edit{margin-left:auto;flex:none;background:none;border:1px solid var(--ink);border-radius:var(--radius);padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;transition:background .18s,color .18s}
+.db-edit:hover{background:var(--ink);color:var(--paper)}
+
+/* ===== 03 排版基础 ===== */
+.view{display:none;padding-bottom:20px}
+.view.is-on{display:block;animation:rise .4s cubic-bezier(.22,.8,.28,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.eyebrow{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.18em;color:var(--graphite);margin:0 0 16px}
+.eyebrow::before{content:"";width:18px;height:1px;background:var(--ink);flex:none}
+.eyebrow .en{color:var(--muted)}
+h1,h2,h3,h4{margin:0;font-weight:900;letter-spacing:-.025em;line-height:1.1}
+h1{font-size:clamp(36px,5.4vw,70px);line-height:1.02}
+h2{font-size:clamp(24px,3vw,36px);letter-spacing:-.03em}
+h3{font-size:18px;font-weight:700;letter-spacing:-.01em;line-height:1.35}
+h4{font-size:15px;font-weight:700;letter-spacing:0}
+.lede{font-size:15.5px;line-height:1.78;color:var(--graphite);max-width:64ch;margin:16px 0 0}
+.small{font-size:12.5px;line-height:1.75;color:var(--muted);margin:0}
+.block{padding:72px 0;border-top:1px solid var(--line)}
+.block-head{margin-bottom:38px}
+.block-head h2{max-width:24ch}
+.two-col{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line)}
+.two-col>div{padding:32px 36px 0 0}
+.two-col>div+div{padding:32px 0 0 36px;border-left:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:var(--paper);border:none;border-radius:var(--radius);padding:13px 22px;font-size:13.5px;font-weight:700;letter-spacing:.02em;cursor:pointer;transition:background .2s,color .2s,transform .2s}
+.btn:hover{background:var(--accent);color:var(--ink);transform:translateY(-1px)}
+.btn svg{width:15px;height:15px}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--line-d)}
+.btn.ghost:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.note-band{display:flex;gap:14px;align-items:flex-start;border-left:3px solid var(--ink);background:rgba(255,255,255,.45);padding:14px 16px;font-size:12.5px;line-height:1.75;color:var(--graphite)}
+.note-band b{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;flex:none;padding-top:3px}
+
+/* ===== 04 首屏 ===== */
+.hero{display:grid;grid-template-columns:1.04fr .96fr;gap:52px;align-items:center;padding:56px 0 64px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 30px}
+.hero-meta span{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--graphite);border:1px solid var(--line-d);padding:5px 9px;border-radius:var(--radius);background:rgba(255,255,255,.4)}
+.hero-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hero-figure{position:relative;margin:0}
+.hero-figure img{width:100%;height:520px;object-fit:cover;border-radius:var(--radius);filter:grayscale(.15) contrast(1.02)}
+.hero-figure .tick{position:absolute;top:16px;left:16px;background:var(--accent);color:var(--ink);font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.16em;padding:5px 8px}
+.hero-figure figcaption{display:flex;justify-content:space-between;gap:14px;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--muted);padding-top:9px;border-top:1px solid var(--line);margin-top:9px}
+
+/* ===== 05 档案表单 ===== */
+.profile-grid{display:grid;grid-template-columns:1fr 420px;gap:30px;align-items:start}
+.panel{border:1px solid var(--line);background:rgba(255,255,255,.42);border-radius:var(--radius);padding:24px}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.panel-head span{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--muted)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:18px 22px}
+.field{min-width:0}
+.field.full{grid-column:1/-1}
+.flabel{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:9.5px;font-weight:500;letter-spacing:.14em;color:var(--graphite);margin-bottom:7px}
+.flabel em{font-style:normal;color:var(--muted);letter-spacing:.06em}
+.num-input{display:flex;align-items:baseline;gap:7px;border-bottom:1px solid var(--line-d);transition:border-color .2s}
+.num-input:focus-within{border-color:var(--ink)}
+.num-input input{width:100%;min-width:0;border:none;background:none;outline:none;padding:3px 0 7px;font-family:var(--mono);font-size:23px;font-weight:500;letter-spacing:-.02em;color:var(--ink)}
+.num-input input::placeholder{color:var(--line-d)}
+.num-input .unit2{font-family:var(--mono);font-size:10px;color:var(--muted);flex:none}
+select{width:100%;border:1px solid var(--line-d);border-radius:var(--radius);background:rgba(255,255,255,.55);padding:9px 11px;font-size:13px;outline:none;cursor:pointer;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--graphite) 50%),linear-gradient(135deg,var(--graphite) 50%,transparent 50%);background-position:calc(100% - 15px) 17px,calc(100% - 10px) 17px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.seg{display:flex;border:1px solid var(--line-d);border-radius:var(--radius);overflow:hidden;background:rgba(255,255,255,.5)}
+.seg button{flex:1;background:none;border:none;padding:8px 2px;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--graphite);transition:background .16s,color .16s;white-space:nowrap}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);font-weight:700}
+
+/* ===== 06 结果 ===== */
+.result{background:var(--ink);color:var(--paper);border-radius:var(--radius);padding:26px 26px 22px;position:sticky;top:124px}
+.out-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.out-k{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:rgba(242,241,236,.55);margin-bottom:6px}
+.out-v{font-size:clamp(38px,4.4vw,52px);font-weight:600;line-height:1;color:var(--accent);display:inline-block}
+.out-u{font-family:var(--mono);font-size:11px;color:rgba(242,241,236,.6);margin-left:6px}
+.out-macros{display:flex;gap:16px;flex-wrap:wrap}
+.out-macros b{display:block;font-family:var(--mono);font-size:19px;font-weight:500;line-height:1.2}
+.out-macros span{display:block;font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:rgba(242,241,236,.5);margin-top:2px}
+.scale-wrap{margin:22px 0 4px}
+.dose-scale{width:100%;display:block}
+.scale-legend{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;color:rgba(242,241,236,.42);margin-top:4px}
+.macro-bars{margin-top:18px}
+.mbar{height:7px;display:flex;gap:2px;background:rgba(255,255,255,.12);border-radius:1px;overflow:hidden}
+.mbar i{display:block;height:100%;transition:width .5s cubic-bezier(.2,.8,.3,1)}
+.mbar .p{background:var(--accent)}.mbar .c{background:rgba(242,241,236,.82)}.mbar .f{background:rgba(242,241,236,.32)}
+.mbar-legend{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap}
+.mbar-legend span{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;color:rgba(242,241,236,.55)}
+.mbar-legend i{width:6px;height:6px;display:block}
+.result-facts{margin-top:18px;padding-top:14px;border-top:1px solid rgba(242,241,236,.16);display:grid;gap:7px}
+.rf{display:flex;justify-content:space-between;gap:14px;font-size:12px;line-height:1.6}
+.rf span{color:rgba(242,241,236,.55)}
+.rf b{font-family:var(--mono);font-size:12px;font-weight:500;text-align:right}
+.result-msg{margin-top:14px;padding:10px 12px;background:rgba(220,238,75,.13);border-left:2px solid var(--accent);font-size:11.5px;line-height:1.7;color:rgba(242,241,236,.85)}
+.result-msg.is-warn{background:rgba(196,71,42,.22);border-left-color:#E0704E}
+
+/* ===== 07 原则 / 入口 ===== */
+.principles{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}
+.principles article{padding:26px 30px 0 0;border-right:1px solid var(--line)}
+.principles article:last-child{border-right:none;padding-right:0}
+.principles .num{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--ink);margin-bottom:16px}
+.principles .num::after{content:"";display:block;width:24px;height:2px;background:var(--accent);margin-top:7px}
+.principles p{font-size:13px;line-height:1.8;color:var(--graphite);margin:9px 0 0}
+.entries{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.entry{display:flex;flex-direction:column;justify-content:space-between;gap:26px;border:1px solid var(--line);background:var(--card);border-radius:var(--radius);padding:22px 20px 18px;min-height:172px;transition:border-color .2s,transform .2s,box-shadow .2s}
+.entry:hover{border-color:var(--ink);transform:translateY(-3px);box-shadow:0 14px 30px -22px rgba(23,26,22,.5)}
+.entry .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--muted)}
+.entry h3{margin-top:10px}
+.entry p{font-size:12px;color:var(--graphite);margin:7px 0 0;line-height:1.7}
+.entry .go{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em}
+.entry .go svg{width:17px;height:17px}
+
+/* ===== 08 tab ===== */
+.tabs{display:flex;border-bottom:1px solid var(--line-d);margin-bottom:32px;flex-wrap:wrap;align-items:flex-end}
+.tabs button{background:none;border:none;cursor:pointer;padding:0 20px 12px;font-size:13.5px;font-weight:500;color:var(--muted);position:relative;transition:color .18s;white-space:nowrap}
+.tabs button:first-child{padding-left:0}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{color:var(--ink);font-weight:700}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--ink)}
+.tabs button:first-child[aria-selected="true"]::after{right:20px}
+.tabs .tab-hint{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--muted);padding-bottom:12px}
+
+/* ===== 09 饮食 ===== */
+.diet-top{display:grid;grid-template-columns:1fr 300px;gap:42px;align-items:start;margin-bottom:30px}
+.diet-figure{margin:0}
+.diet-figure img{width:100%;height:272px;object-fit:cover;border-radius:var(--radius);filter:grayscale(.1)}
+.diet-figure figcaption{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--muted);padding-top:8px;border-top:1px solid var(--line);margin-top:8px}
+.sum-grid{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink);border-bottom:1px solid var(--line)}
+.sum-grid>div{padding:16px 0 14px;border-right:1px solid var(--line)}
+.sum-grid>div+div{padding-left:18px}
+.sum-grid>div:last-child{border-right:none}
+.sum-grid b{display:block;font-family:var(--mono);font-size:27px;font-weight:500;line-height:1.1;letter-spacing:-.02em}
+.sum-grid span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--muted);margin-top:5px}
+.day-note{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.7;color:var(--graphite)}
+.day-note b{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--ink);flex:none;min-width:56px;padding-top:3px}
+.meal{border-bottom:1px solid var(--line)}
+.meal-head{display:grid;grid-template-columns:88px 1fr auto;gap:16px;align-items:baseline;padding:20px 0 10px}
+.meal-head .m-name{font-size:15.5px;font-weight:700;letter-spacing:-.01em}
+.meal-head .m-time{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--muted)}
+.meal-head .m-kcal{font-family:var(--mono);font-size:11px;color:var(--graphite)}
+.meal-head .m-kcal b{font-size:15px;font-weight:600;color:var(--ink)}
+.food-head,.food-row{display:grid;grid-template-columns:1fr 88px 76px 88px 76px;gap:14px;align-items:center}
+.food-head{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--muted);padding:7px 0 5px;border-top:1px solid var(--line-d);border-bottom:1px solid var(--line)}
+.food-head span:nth-child(n+3){text-align:right}
+.food-row{padding:10px 0;border-top:1px dashed rgba(216,213,203,.8)}
+.food-row:first-of-type{border-top:none}
+.food-name{font-size:13.5px;display:flex;align-items:center;gap:8px;min-width:0}
+.food-name i{width:4px;height:4px;background:var(--line-d);border-radius:50%;flex:none}
+.food-q{font-family:var(--mono);font-size:11px;color:var(--graphite);text-align:right}
+.food-num{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:right}
+.food-num.k{color:var(--ink);font-weight:500}
+.swap-table{width:100%;border-collapse:collapse;margin-top:14px}
+.swap-table th{text-align:left;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--muted);font-weight:500;padding:0 0 9px;border-bottom:1px solid var(--line-d)}
+.swap-table td{font-size:12.5px;padding:10px 0;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
+.swap-table td:first-child{width:60px;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--muted)}
+.swap-table td:nth-child(2){color:var(--graphite)}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.chip{font-size:11.5px;border:1px solid var(--line-d);border-radius:var(--radius);padding:5px 9px;color:var(--graphite);background:rgba(255,255,255,.4)}
+.checklist{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
+.check-item{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:12.5px;user-select:none}
+.check-item .box{width:15px;height:15px;border:1px solid var(--line-d);flex:none;border-radius:1px;display:grid;place-items:center;transition:background .15s,border-color .15s}
+.check-item .box svg{width:9px;height:9px;fill:none;stroke:var(--ink);stroke-width:2.6;opacity:0}
+.check-item[data-on="true"] .box{background:var(--accent);border-color:var(--accent)}
+.check-item[data-on="true"] .box svg{opacity:1}
+.check-item[data-on="true"] .co-name{color:var(--muted);text-decoration:line-through}
+.check-item .co-q{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--muted);flex:none}
+
+/* ===== 10 训练 ===== */
+.train-bar{display:flex;align-items:center;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+.train-bar .seg{width:auto;min-width:210px}
+.train-bar .seg.four{width:330px;min-width:330px}
+.train-days{display:flex;gap:8px;flex-wrap:wrap}
+.day-btn{border:1px solid var(--line);background:var(--card);border-radius:var(--radius);padding:11px 14px;cursor:pointer;text-align:left;min-width:124px;transition:border-color .2s,background .2s}
+.day-btn:hover{border-color:var(--line-d)}
+.day-btn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.day-btn .d-k{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--muted)}
+.day-btn[aria-pressed="true"] .d-k{color:rgba(242,241,236,.6)}
+.day-btn .d-n{display:block;font-size:13.5px;font-weight:700;margin-top:3px;letter-spacing:-.01em}
+.day-btn .d-f{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
+.day-btn[aria-pressed="true"] .d-f{color:rgba(242,241,236,.65)}
+.train-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;margin:26px 0 12px}
+.train-head h3{font-size:21px}
+.train-head .meta{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted);text-align:right}
+.ex-table{border-top:1px solid var(--ink)}
+.ex-head,.ex-row{display:grid;grid-template-columns:1fr 104px 60px 74px 84px;gap:16px;align-items:center}
+.ex-head{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--muted);padding:8px 0;border-bottom:1px solid var(--line-d)}
+.ex-head span:nth-child(n+2){text-align:right}
+.ex-row{padding:15px 0;border-bottom:1px solid var(--line);transition:background .16s,padding-left .16s}
+.ex-row:hover{background:rgba(220,238,75,.14);padding-left:6px}
+.ex-row .ex-n{font-size:14.5px;font-weight:700;letter-spacing:-.01em}
+.ex-row .ex-t{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5}
+.ex-row .ex-s{font-family:var(--mono);font-size:12px;text-align:right;font-weight:500}
+.ex-row .ex-r{font-family:var(--mono);font-size:11.5px;text-align:right;color:var(--graphite)}
+.ex-row .ex-load{font-family:var(--mono);font-size:11.5px;text-align:right;color:var(--ink)}
+.ex-row .ex-load small{display:block;font-size:8.5px;color:var(--muted);letter-spacing:.06em}
+.ex-row .ex-rest{font-family:var(--mono);font-size:10.5px;text-align:right;color:var(--muted)}
+.train-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:30px}
+.tcard{border:1px solid var(--line);background:var(--card);border-radius:var(--radius);padding:18px 18px 16px}
+.tcard .k{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--muted)}
+.tcard h4{margin-top:9px;font-size:14px}
+.tcard p{font-size:12px;line-height:1.75;color:var(--graphite);margin:7px 0 0}
+
+/* ===== 11 周安排 ===== */
+.plan-stat{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink);border-bottom:1px solid var(--line);margin-bottom:26px}
+.plan-stat>div{padding:16px 0 14px;border-right:1px solid var(--line)}
+.plan-stat>div+div{padding-left:18px}
+.plan-stat>div:last-child{border-right:none}
+.plan-stat b{display:block;font-family:var(--mono);font-size:25px;font-weight:500;line-height:1.1}
+.plan-stat span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--muted);margin-top:5px}
+.week-table{border-top:1px solid var(--line-d)}
+.week-row{display:grid;grid-template-columns:78px 92px 1fr 148px 88px;gap:16px;padding:14px 0;border-bottom:1px solid var(--line);align-items:center}
+.week-row .w-d{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--graphite)}
+.week-row .w-tag{font-family:var(--mono);font-size:9px;letter-spacing:.12em;padding:3px 7px;border-radius:1px;justify-self:start}
+.week-row .w-tag.train{background:var(--ink);color:var(--paper)}
+.week-row .w-tag.rest{background:var(--paper-2);color:var(--graphite)}
+.week-row .w-tag.cardio{background:var(--accent);color:var(--ink)}
+.week-row .w-t{font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+.week-row .w-n{font-size:11.5px;color:var(--muted);text-align:right}
+.week-row .w-s{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right}
+
+/* ===== 12 避坑 ===== */
+.avoid-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px}
+.avoid-tabs button{border:1px solid var(--line-d);background:rgba(255,255,255,.4);border-radius:var(--radius);padding:7px 14px;font-size:12.5px;cursor:pointer;color:var(--graphite);transition:all .18s}
+.avoid-tabs button[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper);font-weight:700}
+.avoid-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 40px}
+.avoid{border-top:1px solid var(--line);padding:20px 0 18px;display:grid;grid-template-columns:36px 1fr;gap:14px}
+.avoid .a-n{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted);padding-top:4px}
+.avoid h4{font-size:14.5px;color:var(--ink)}
+.avoid h4::before{content:"×";color:var(--warn);font-family:var(--mono);margin-right:7px;font-weight:600}
+.avoid p{font-size:12px;line-height:1.75;color:var(--graphite);margin:6px 0 0}
+.avoid .fix{display:flex;gap:7px;margin-top:8px;font-size:11.5px;line-height:1.7;color:var(--ink)}
+.avoid .fix b{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;background:var(--accent);padding:2px 5px;flex:none;height:16px;margin-top:2px}
+
+/* ===== 13 习惯 ===== */
+.habit-hero{display:grid;grid-template-columns:1.1fr .9fr;border:1px solid var(--line);background:var(--card);border-radius:var(--radius);overflow:hidden;margin-bottom:38px}
+.habit-copy{padding:30px 34px}
+.habit-copy h2{font-size:clamp(23px,2.6vw,30px);max-width:18ch}
+.habit-copy p{font-size:13.5px;line-height:1.8;color:var(--graphite);margin:14px 0 0;max-width:46ch}
+.habit-img img{width:100%;height:100%;min-height:280px;object-fit:cover;filter:grayscale(.18) contrast(1.04);border-left:1px solid var(--line)}
+.habit-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.hcard{border:1px solid var(--line);background:var(--card);border-radius:var(--radius);padding:18px 16px 15px}
+.hcard .k{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--muted)}
+.hcard b{display:block;font-family:var(--mono);font-size:30px;font-weight:500;line-height:1.1;margin-top:9px;letter-spacing:-.02em}
+.hcard b small{font-family:var(--mono);font-size:9.5px;color:var(--muted);font-weight:400;margin-left:3px;letter-spacing:0}
+.hcard p{font-size:11px;line-height:1.65;color:var(--muted);margin:8px 0 0}
+.timeline{margin-top:10px;border-top:1px solid var(--line-d)}
+.tl-row{display:grid;grid-template-columns:70px 1fr 1fr;gap:18px;padding:13px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.tl-row .tl-t{font-family:var(--mono);font-size:11px;color:var(--ink)}
+.tl-row .tl-n{font-size:13.5px;font-weight:600}
+.tl-row .tl-d{font-size:11.5px;color:var(--muted)}
+.tl-row.is-key{background:rgba(220,238,75,.12)}
+.tl-row.is-key .tl-n::after{content:"训练日";font-family:var(--mono);font-size:8px;letter-spacing:.1em;background:var(--ink);color:var(--paper);padding:2px 5px;margin-left:8px;vertical-align:middle}
+
+/* ===== 14 记录 ===== */
+.log-grid{display:grid;grid-template-columns:1fr 340px;gap:42px;align-items:start}
+.log-form{border:1px solid var(--line);background:var(--card);border-radius:var(--radius);padding:22px}
+.log-form .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.log-form .num-input input{font-size:20px}
+.btn-row{display:flex;gap:10px;margin-top:20px;align-items:center;flex-wrap:wrap}
+.log-list{margin-top:22px}
+.log-item{display:grid;grid-template-columns:82px 1fr 1fr 82px 30px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.log-item .l-d{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.log-item .l-v{font-family:var(--mono);font-size:13px}
+.log-item .l-v small{font-family:var(--mono);font-size:8.5px;color:var(--muted);margin-left:3px}
+.log-item .l-delta{font-family:var(--mono);font-size:11px;color:var(--graphite);text-align:right}
+.log-item .l-del{border:none;background:none;cursor:pointer;color:var(--muted);padding:3px;line-height:0}
+.log-item .l-del:hover{color:var(--ink)}
+.log-item .l-del svg{width:13px;height:13px}
+.empty{border:1px dashed var(--line-d);border-radius:var(--radius);padding:26px 20px;text-align:center;color:var(--muted);font-size:12.5px;line-height:1.8}
+.chart-box{border:1px solid var(--line);background:var(--card);border-radius:var(--radius);padding:18px 16px 12px}
+.c-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.c-head span{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--muted)}
+.chart-svg{width:100%;height:200px;display:block}
+.legend-mini{display:flex;gap:14px;margin-top:8px;font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;color:var(--muted)}
+.legend-mini i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:5px}
+.bmi-line{display:flex;justify-content:space-between;font-size:12px;color:var(--graphite);padding:12px 0 0;border-top:1px solid var(--line);margin-top:14px}
+.habit{margin-top:20px}
+.habit-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+.habit-row .h-n{font-size:12.5px}
+.habit-row .h-s{font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:.08em}
+.habit-box{width:17px;height:17px;border:1px solid var(--line-d);border-radius:1px;display:grid;place-items:center;flex:none}
+.habit-row[data-on="true"] .habit-box{background:var(--ink);border-color:var(--ink)}
+.habit-row[data-on="true"] .habit-box svg{opacity:1}
+.habit-box svg{width:10px;height:10px;fill:none;stroke:var(--paper);stroke-width:2.6;opacity:0}
+
+/* ===== 15 页脚 ===== */
+.site-foot{background:var(--ink);color:var(--paper);margin-top:36px;padding:42px 0 36px}
+.foot-inner{display:flex;justify-content:space-between;gap:38px;align-items:flex-start;flex-wrap:wrap}
+.foot-brand{font-size:15px;font-weight:700;letter-spacing:.02em}
+.foot-brand span{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:rgba(242,241,236,.5);font-weight:400;margin-top:7px}
+.foot-note{font-size:11.5px;line-height:1.8;color:rgba(242,241,236,.55);max-width:56ch}
+.foot-links{display:flex;gap:18px;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:rgba(242,241,236,.6)}
+.foot-links a:hover{color:var(--accent)}
+
+/* ===== 15b 忌口 / 器械 / 食堂 ===== */
+.seg.four button{font-size:11.5px;padding:8px 1px}
+.pick-row{display:flex;flex-wrap:wrap;gap:6px}
+.pick{border:1px solid var(--line-d);background:rgba(255,255,255,.45);border-radius:var(--radius);padding:6px 10px;font-size:12px;cursor:pointer;color:var(--graphite);transition:background .16s,color .16s,border-color .16s}
+.pick:hover{border-color:var(--ink)}
+.pick[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper);font-weight:700}
+.swap-tag{font-family:var(--mono);font-size:8px;letter-spacing:.06em;background:var(--paper-2);color:var(--graphite);padding:1px 4px;border-radius:1px;flex:none}
+.gear{display:flex;flex-wrap:wrap;gap:6px;margin:-6px 0 22px}
+.gear span{font-size:11.5px;border:1px solid var(--line-d);padding:4px 8px;color:var(--graphite);background:rgba(255,255,255,.4)}
+.gear span:first-child{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--muted);border-color:transparent;background:none;padding-left:0}
+.canteen{border:1px solid var(--ink);background:var(--card);border-radius:var(--radius);padding:20px 22px;margin:0 0 28px}
+.canteen h3{font-size:16px;letter-spacing:-.01em}
+.canteen .cg{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:16px;border-top:1px solid var(--line-d)}
+.canteen .cg>div{padding:13px 14px 0 0;border-right:1px solid var(--line)}
+.canteen .cg>div:last-child{border-right:none}
+.canteen .cg b{display:block;font-family:var(--mono);font-size:11.5px;margin-bottom:5px;font-weight:600}
+.canteen .cg em{display:block;font-style:normal;font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-bottom:6px}
+.canteen .cg p{font-size:11px;line-height:1.7;color:var(--graphite);margin:0}
+
+/* ===== 16 响应式 ===== */
+@media (max-width:1120px){
+  .wrap{width:calc(100% - 56px)}
+  .hero{grid-template-columns:1fr;gap:32px;padding:40px 0 52px}
+  .hero-figure img{height:380px}
+  .profile-grid{grid-template-columns:1fr}
+  .result{position:static}
+  .diet-top{grid-template-columns:1fr;gap:26px}
+  .diet-figure img{height:230px}
+  .log-grid{grid-template-columns:1fr}
+  .habit-hero{grid-template-columns:1fr}
+  .habit-img img{height:240px;min-height:0;border-left:none;border-top:1px solid var(--line)}
+  .nav a{padding:8px 9px;font-size:12.5px}
+  .brand-text em{display:none}
+}
+@media (max-width:900px){
+  .menu-btn{display:grid}
+  .nav{position:fixed;top:112px;left:0;right:0;background:var(--paper);border-bottom:1px solid var(--line);flex-direction:column;align-items:stretch;gap:0;padding:8px 24px 14px;display:none;box-shadow:0 20px 30px -24px rgba(23,26,22,.4)}
+  .nav.is-open{display:flex}
+  .nav a{padding:13px 0;border-bottom:1px solid var(--line);border-radius:0;font-size:14px}
+  .nav a[aria-current="true"]::after{left:0;right:auto;width:20px;bottom:9px}
+  .brand-text em{display:inline}
+  .principles,.entries,.train-cards,.habit-cards,.cardio{grid-template-columns:1fr 1fr}
+  .principles article{border-right:none;padding:22px 20px 0 0}
+  .two-col{grid-template-columns:1fr}
+  .two-col>div+div{border-left:none;padding-left:0;border-top:1px solid var(--line);margin-top:26px}
+  .sum-grid{grid-template-columns:1fr 1fr}
+  .sum-grid>div:nth-child(2){border-right:none}
+  .sum-grid>div:nth-child(3),.sum-grid>div:nth-child(4){border-top:1px solid var(--line)}
+  .sum-grid>div:nth-child(3){padding-left:0}
+  .avoid-grid{grid-template-columns:1fr}
+  .plan-stat{grid-template-columns:1fr 1fr}
+}
+@media (max-width:680px){
+  .wrap{width:calc(100% - 32px)}
+  .block{padding:48px 0}
+  .head-inner{height:60px;gap:14px}
+  .nav{top:104px}
+  h1{font-size:clamp(32px,9vw,42px)}
+  .hero-figure img{height:280px}
+  .db-cell{padding:0 12px}
+  .db-cell:nth-child(2),.db-cell:nth-child(4){display:none}
+  .fields{grid-template-columns:1fr 1fr;gap:16px}
+  .field.full{grid-column:1/-1}
+  .panel{padding:18px}
+  .result{padding:20px 18px}
+  .out-v{font-size:42px}
+  .out-macros{gap:14px}
+  .out-macros b{font-size:17px}
+  .food-head{display:none}
+  .food-row{grid-template-columns:1fr auto;row-gap:2px}
+  .food-row .food-name{grid-column:1;grid-row:1}
+  .food-row .food-q{grid-column:2;grid-row:1}
+  .food-row .food-num{display:none}
+  .food-row .food-num.k{display:block;grid-column:2;grid-row:2;text-align:right;font-size:10px}
+  .meal-head{grid-template-columns:1fr auto;gap:6px}
+  .checklist{grid-template-columns:1fr}
+  .ex-head{display:none}
+  .ex-row{grid-template-columns:1fr auto;row-gap:5px}
+  .ex-row .ex-s{text-align:right}
+  .ex-row .ex-r,.ex-row .ex-load,.ex-row .ex-rest{grid-column:1/-1;text-align:left;display:inline-block;margin-right:12px}
+  .ex-row .ex-load small{display:inline;margin-left:4px}
+  .week-row{grid-template-columns:52px 1fr;gap:2px 12px;padding:13px 0}
+  .week-row .w-d{grid-row:1;grid-column:1;align-self:start}
+  .week-row .w-tag{grid-row:1;grid-column:2;justify-self:start}
+  .week-row .w-t{grid-row:2;grid-column:2}
+  .week-row .w-n{grid-row:3;grid-column:2;text-align:left}
+  .week-row .w-s{grid-row:4;grid-column:2;text-align:left}
+  .principles,.entries,.train-cards{grid-template-columns:1fr}
+  .train-days{gap:6px}
+  .day-btn{min-width:0;flex:1 1 calc(50% - 6px);padding:9px 10px}
+  .habit-cards,.plan-stat{grid-template-columns:1fr 1fr}
+  .canteen .cg{grid-template-columns:1fr 1fr}
+  .canteen .cg>div{border-right:none;padding-right:0}
+  .canteen .cg>div:nth-child(odd){border-right:1px solid var(--line);padding-right:14px}
+  .train-bar .seg.four{width:100%;min-width:0}
+  .train-bar .seg.four button{padding:10px 1px}
+  .pick{padding:9px 12px}
+  .tabs button{padding:0 12px 11px;font-size:12.5px}
+  .tabs .tab-hint{display:none}
+  .habit-copy{padding:22px 18px}
+  .log-form .three{grid-template-columns:1fr}
+  .log-item{grid-template-columns:68px 1fr 1fr 26px}
+  .log-item .l-delta{display:none}
+  .foot-inner{flex-direction:column;gap:20px}
+  .avoid-grid{gap:0}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap head-inner">
+    <a class="brand" href="#overview" aria-label="剂量 DOSE 首页">
+      <span class="brand-mark">D</span>
+      <span class="brand-text">剂量<em>DOSE</em></span>
+    </a>
+    <nav class="nav" id="siteNav">
+      <a href="#overview" data-nav="overview">概览</a>
+      <a href="#diet" data-nav="diet">饮食</a>
+      <a href="#train" data-nav="train">训练</a>
+      <a href="#plan" data-nav="plan">安排</a>
+      <a href="#avoid" data-nav="avoid">避坑</a>
+      <a href="#habit" data-nav="habit">习惯</a>
+      <a href="#log" data-nav="log">记录</a>
+    </nav>
+    <button class="menu-btn" id="menuBtn" aria-label="打开菜单" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
+  <div class="databar">
+    <div class="wrap db-inner" id="dataBar"></div>
+  </div>
+</header>
+
+<main>
+
+<!-- ===== 视图：概览 ===== -->
+<section class="view is-on" data-view="overview" id="v-overview">
+  <div class="wrap hero">
+    <div>
+      <p class="eyebrow">训练 × 饮食 <span class="en">/ 数据驱动</span></p>
+      <h1>改一个数字，<br>整套计划跟着变。</h1>
+      <p class="lede">填一次身体数据，热量、三餐份量、训练动作与参考负荷、每周安排、日常习惯全部自动重算。不用自己套公式，也不用照抄别人的计划。</p>
+      <div class="hero-meta">
+        <span>MIFFLIN-ST JEOR</span><span>按体重缩放份量</span><span>本地保存档案</span>
+      </div>
+      <div class="hero-actions">
+        <button class="btn" id="startProfile">填写我的数据<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+        <a class="btn ghost" href="#diet">先看示例</a>
+      </div>
+    </div>
+    <figure class="hero-figure">
+      <span class="tick">FIG. 01 — 硬拉起始位</span>
+      <img src="https://aka.doubaocdn.com/s/r0qLZy19KL" alt="哑光健身房中，一名训练者握杠铃做硬拉起始动作">
+      <figcaption><span>主项先做，孤立动作后做</span><span>每组留 2–3 次余力</span></figcaption>
+    </figure>
+  </div>
+
+  <div class="wrap block" id="profileBlock">
+    <div class="block-head">
+      <p class="eyebrow">01 / 身体档案</p>
+      <h2>你的数据</h2>
+      <p class="lede">改动任何一项，右侧结果与后面六个页面会立即同步。带 <span class="mono">*</span> 的项目影响计算精度，其余只影响计划形式。</p>
+    </div>
+
+    <div class="profile-grid">
+      <div class="panel">
+        <div class="panel-head"><h3 style="font-size:16px">基本参数</h3><span>PROFILE</span></div>
+        <div class="fields">
+          <div class="field">
+            <span class="flabel">生理性别 <em>影响基础代谢</em></span>
+            <div class="seg" data-group="sex">
+              <button type="button" data-val="male" aria-pressed="true">男</button>
+              <button type="button" data-val="female" aria-pressed="false">女</button>
+            </div>
+          </div>
+          <div class="field">
+            <span class="flabel">年龄 <em>岁</em></span>
+            <div class="num-input"><input id="inAge" type="number" min="14" max="85" step="1" value="21"><span class="unit2">岁</span></div>
+          </div>
+          <div class="field">
+            <span class="flabel">身高 <em>cm</em></span>
+            <div class="num-input"><input id="inH" type="number" min="130" max="220" step="0.5" value="161"><span class="unit2">cm</span></div>
+          </div>
+          <div class="field">
+            <span class="flabel">体重 <em>kg · 决定份量与负荷</em></span>
+            <div class="num-input"><input id="inW" type="number" min="35" max="200" step="0.1" value="67"><span class="unit2">kg</span></div>
+          </div>
+          <div class="field">
+            <span class="flabel">腰围 <em>cm · 可选</em></span>
+            <div class="num-input"><input id="inWaist" type="number" min="45" max="160" step="0.5" placeholder="—"><span class="unit2">cm</span></div>
+          </div>
+          <div class="field">
+            <span class="flabel">目标体重 <em>kg</em></span>
+            <div class="num-input"><input id="inTW" type="number" min="35" max="200" step="0.1" value="60"><span class="unit2">kg</span></div>
+          </div>
+          <div class="field full">
+            <span class="flabel">日常活动水平 <em>不含训练</em></span>
+            <select id="inAct">
+              <option value="1.2">久坐 · 几乎不运动，办公室 / 教室为主</option>
+              <option value="1.375">轻度 · 每周训练 1–3 次</option>
+              <option value="1.55">中度 · 每周训练 3–5 次</option>
+              <option value="1.725">高强度 · 每周训练 6–7 次</option>
+              <option value="1.9">极高 · 体力劳动 / 每天两练</option>
+            </select>
+          </div>
+          <div class="field">
+            <span class="flabel">每周训练 <em>天</em></span>
+            <div class="seg" data-group="days">
+              <button type="button" data-val="3" aria-pressed="false">3 天</button>
+              <button type="button" data-val="4" aria-pressed="true">4 天</button>
+              <button type="button" data-val="5" aria-pressed="false">5 天</button>
+            </div>
+          </div>
+          <div class="field full">
+            <span class="flabel">可用器械 <em>决定动作库</em></span>
+            <div class="seg four" data-group="place">
+              <button type="button" data-val="gym" aria-pressed="true">健身房全套</button>
+              <button type="button" data-val="dumbbell" aria-pressed="false">只有哑铃</button>
+              <button type="button" data-val="band" aria-pressed="false">只有弹力带</button>
+              <button type="button" data-val="home" aria-pressed="false">无器械</button>
+            </div>
+          </div>
+          <div class="field">
+            <span class="flabel">训练经验 <em>决定组次与负荷</em></span>
+            <div class="seg" data-group="exp">
+              <button type="button" data-val="beginner" aria-pressed="false">新手</button>
+              <button type="button" data-val="trained" aria-pressed="true">有基础</button>
+            </div>
+          </div>
+          <div class="field full">
+            <span class="flabel">当前目标 <em>决定热量与训练结构</em></span>
+            <div class="seg" data-group="goal">
+              <button type="button" data-val="cut" aria-pressed="true">减脂</button>
+              <button type="button" data-val="recomp" aria-pressed="false">重塑</button>
+              <button type="button" data-val="build" aria-pressed="false">增肌</button>
+            </div>
+          </div>
+          <div class="field full">
+            <span class="flabel">吃饭条件 <em>决定餐单形式</em></span>
+            <div class="seg" data-group="dining">
+              <button type="button" data-val="cook" aria-pressed="true">自己做饭</button>
+              <button type="button" data-val="canteen" aria-pressed="false">食堂 / 外卖</button>
+            </div>
+          </div>
+          <div class="field full">
+            <span class="flabel">忌口与限制 <em>可多选，餐单自动替换</em></span>
+            <div class="pick-row" id="tabooRow"></div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn ghost" id="resetProfile" type="button">恢复默认数值</button>
+          <span class="small" id="saveState">档案自动保存在本机浏览器</span>
+        </div>
+      </div>
+
+      <aside class="result" id="resultPanel"></aside>
+    </div>
+  </div>
+
+  <div class="wrap block">
+    <div class="block-head">
+      <p class="eyebrow">02 / 计划逻辑</p>
+      <h2>为什么这些数字会变</h2>
+    </div>
+    <div class="principles">
+      <article>
+        <span class="num">01</span>
+        <h3>热量来自你的基础代谢</h3>
+        <p>先用 Mifflin-St Jeor 公式算出基础代谢，再乘活动系数得到维持热量。减脂取 18% 缺口，增肌取 10% 盈余——同一个公式，不同目标，不同结果。</p>
+      </article>
+      <article>
+        <span class="num">02</span>
+        <h3>份量按你的蛋白与碳水折算</h3>
+        <p>餐单先定义食物结构，再按你算出的蛋白质、碳水、脂肪克数换算真实份量。体重变了，鸡胸和米饭的克数就跟着变，而不是固定模板。</p>
+      </article>
+      <article>
+        <span class="num">03</span>
+        <h3>训练按场地、天数、经验生成</h3>
+        <p>3 / 4 / 5 天对应三种分化；健身房、只有哑铃、只有弹力带、无器械四档各一套动作库，切换档位后动作与负荷表达同步更换。</p>
+      </article>
+    </div>
+  </div>
+
+  <div class="wrap block">
+    <div class="block-head">
+      <p class="eyebrow">03 / 从这里进去</p>
+      <h2>六份已经算好的计划</h2>
+    </div>
+    <div class="entries" id="entryLinks"></div>
+  </div>
+</section>
+<!-- ===== 视图：饮食 ===== -->
+<section class="view" data-view="diet" id="v-diet">
+  <div class="wrap block" style="border-top:none;padding-top:52px">
+    <div class="block-head">
+      <p class="eyebrow">饮食计划 <span class="en">/ DIET</span></p>
+      <h2>一天四餐，份量按你的数据折算</h2>
+      <p class="lede">下面的克数不是固定模板：蛋白类按你算出的每日蛋白质量缩放，主食按碳水缩放，脂肪按脂肪配额缩放，蔬菜保持体积不变。改档案里的体重或目标，这里会立刻重算；填了忌口或选了食堂，食材与打菜方案也会跟着换。</p>
+    </div>
+
+    <div class="diet-top">
+      <div>
+        <div class="tabs" id="dietTabs">
+          <button type="button" data-diet="cut" aria-selected="true">减脂档</button>
+          <button type="button" data-diet="recomp" aria-selected="false">重塑档</button>
+          <button type="button" data-diet="build" aria-selected="false">增肌档</button>
+          <span class="tab-hint" id="dietGoalTag">—</span>
+        </div>
+        <div class="sum-grid">
+          <div><b id="dKcal">—</b><span>KCAL / 日</span></div>
+          <div><b id="dP">—</b><span>蛋白 G</span></div>
+          <div><b id="dC">—</b><span>碳水 G</span></div>
+          <div><b id="dF">—</b><span>脂肪 G</span></div>
+        </div>
+        <div class="day-note"><b>配比</b><span id="dietNote">—</span></div>
+        <div class="day-note"><b>蛋白密度</b><span id="dietDensity">—</span></div>
+      </div>
+      <figure class="diet-figure">
+        <img src="https://aka.doubaocdn.com/s/XdPH30zGD5" alt="白色陶瓷盘中的鸡胸肉、糙米、西兰花与牛油果">
+        <figcaption>一餐结构：一掌蛋白 · 一拳主食 · 两拳蔬菜 · 一拇指脂肪</figcaption>
+      </figure>
+    </div>
+
+    <div class="canteen" id="canteenBox" style="display:none"></div>
+
+    <div class="meals" id="mealList"></div>
+
+    <div class="two-col" style="margin-top:42px">
+      <div>
+        <p class="eyebrow">替换 <span class="en">/ SWAP</span></p>
+        <h3>同类互换，热量接近</h3>
+        <p class="small" style="margin-top:7px">吃腻了就按这张表换，不用重算。换完保证蛋白质总量不变。</p>
+        <table class="swap-table">
+          <thead><tr><th>类别</th><th>可互换（热量接近）</th></tr></thead>
+          <tbody>
+            <tr><td>主食</td><td>糙米饭 150 g ≈ 燕麦 50 g ≈ 红薯 200 g ≈ 全麦面包 2 片 ≈ 玉米 1 根</td></tr>
+            <tr><td>蛋白</td><td>鸡胸 150 g ≈ 虾仁 170 g ≈ 瘦牛肉 130 g ≈ 北豆腐 250 g ≈ 鸡蛋 4 个</td></tr>
+            <tr><td>脂肪</td><td>橄榄油 8 g ≈ 杏仁 12 g ≈ 牛油果 1/3 个 ≈ 花生酱 12 g</td></tr>
+            <tr><td>蔬菜</td><td>西兰花 / 芦笋 / 芥蓝 / 菠菜 / 彩椒，每餐 200 g 起，体积不设上限</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <p class="eyebrow">外食 <span class="en">/ OUT</span></p>
+        <h3>食堂和外卖的点单公式</h3>
+        <p class="small" style="margin-top:7px">没有厨房也能执行，关键是别让一餐把全天缺口吃掉。</p>
+        <div class="chips">
+          <span class="chip">一荤两素 + 半份米饭</span>
+          <span class="chip">优先蒸 / 煮 / 烤</span>
+          <span class="chip">酱汁另放</span>
+          <span class="chip">汤不喝底</span>
+          <span class="chip">奶茶换纯茶</span>
+          <span class="chip">聚餐先吃一碗蔬菜</span>
+        </div>
+        <p class="small" style="margin-top:14px;line-height:1.9">
+          食堂：先打两份绿叶菜，再选一份瘦肉，主食只要半勺；勾芡和油多的菜过一下热水。<br>
+          外卖：搜“轻食 / 蒸菜 / 烧烤（不加酱）”，备注“少油少盐、酱汁分装”。<br>
+          聚餐：当天午餐减掉主食，晚餐照常吃菜和肉；酒精按 7 kcal/g 计入当天总量。
+        </p>
+      </div>
+    </div>
+
+    <div class="block" style="margin-top:40px;padding-bottom:0">
+      <p class="eyebrow">采购 <span class="en">/ WEEKLY</span></p>
+      <h3>一周采购清单</h3>
+      <p class="small" style="margin-top:7px">勾选状态保存在本机，下次打开还在。</p>
+      <div class="checklist" id="checklist"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 视图：训练 ===== -->
+<section class="view" data-view="train" id="v-train">
+  <div class="wrap block" style="border-top:none;padding-top:52px">
+    <div class="block-head">
+      <p class="eyebrow">训练计划 <span class="en">/ TRAINING</span></p>
+      <h2>动作、组次、负荷，都按你生成</h2>
+      <p class="lede">分化方式跟着每周训练天数走，动作库跟着场地走，组次与参考负荷跟着经验和体重走。参考负荷只是起点——第一组做完还留 2–3 次余力，就说明选对了。</p>
+    </div>
+
+    <div class="train-bar">
+      <div class="seg four" data-group="place2">
+        <button type="button" data-val="gym" aria-pressed="true">健身房</button>
+        <button type="button" data-val="dumbbell" aria-pressed="false">哑铃</button>
+        <button type="button" data-val="band" aria-pressed="false">弹力带</button>
+        <button type="button" data-val="home" aria-pressed="false">无器械</button>
+      </div>
+      <span class="small" id="trainModeHint">—</span>
+    </div>
+
+    <div class="gear" id="gearList"></div>
+
+    <div class="train-days" id="trainDays"></div>
+
+    <div class="train-head">
+      <div>
+        <p class="eyebrow" style="margin-bottom:6px" id="dayFocus">—</p>
+        <h3 id="dayTitle">—</h3>
+      </div>
+      <span class="meta" id="dayMeta">—</span>
+    </div>
+
+    <div class="ex-table" id="exTable"></div>
+
+    <div class="note-band" style="margin-top:18px">
+      <b>负荷说明</b>
+      <span>“参考负荷”= 体重 × 动作系数 × 经验系数，取整到 2.5 kg。它只是第一次训练的起点，个体差异很大：第一组做完若还能多做 4 次以上，下次直接加 5 kg；若做不到目标次数，减 10%。</span>
+    </div>
+
+    <div class="train-cards">
+      <div class="tcard">
+        <span class="k">RPE / 强度</span>
+        <h4>怎么判断重量选对了</h4>
+        <p>RPE 8 表示做完还能再多做 2 次。主项落在 7–8，孤立动作可以到 9。每周 4 练的人不必每组力竭，那会拖慢恢复。</p>
+      </div>
+      <div class="tcard">
+        <span class="k">PROGRESSION / 加重</span>
+        <h4>每周只改一个变量</h4>
+        <p>同一动作连续两周达到次数上限，加 2.5 kg（下肢 5 kg）；没达到就维持重量，先把次数补满。第 6 周整体减量一周。</p>
+      </div>
+      <div class="tcard">
+        <span class="k">CARDIO / 有氧</span>
+        <h4>力量之后再上有氧</h4>
+        <p>同一天训练时，先完成力量。减脂期每周 2–3 次、每次 25–35 分钟，心率控制在最大心率的 60–70%。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 视图：安排 ===== -->
+<section class="view" data-view="plan" id="v-plan">
+  <div class="wrap block" style="border-top:none;padding-top:52px">
+    <div class="block-head">
+      <p class="eyebrow">安排计划 <span class="en">/ WEEKLY PLAN</span></p>
+      <h2>一周七天，排到具体日期</h2>
+      <p class="lede">下面这张表根据你的训练天数自动生成：训练日尽量隔开，有氧放在非训练日或训练之后，休息日保留步行。改档案里的天数，表格会整体重排。</p>
+    </div>
+
+    <div class="plan-stat" id="planStat"></div>
+    <div class="week-table" id="weekTable"></div>
+
+    <div class="two-col" style="margin-top:34px">
+      <div>
+        <p class="eyebrow">排表原则</p>
+        <h3>为什么这么隔</h3>
+        <p class="small" style="margin-top:8px;line-height:1.95">
+          同一肌群两次训练之间至少间隔 48 小时，所以腿部不会连着两天出现。<br>
+          有氧放在非训练日，避免和力量训练抢恢复；如果只能同一天，放在力量之后。<br>
+          完全休息日保留 6000–8000 步的日常活动，比彻底躺平更有利于恢复。
+        </p>
+      </div>
+      <div>
+        <p class="eyebrow">执行顺序</p>
+        <h3>每次训练怎么开始</h3>
+        <p class="small" style="margin-top:8px;line-height:1.95">
+          5 分钟热身：快走或单车 + 动态拉伸，激活当天要用的关节。<br>
+          主项放在体力最好的时候，孤立动作放后面；核心动作留在最后 10 分钟。<br>
+          训练后 5 分钟低强度走动，再拉伸 30 秒 / 肌群，不需要长时间静态拉伸。
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ===== 视图：避坑 ===== -->
+<section class="view" data-view="avoid" id="v-avoid">
+  <div class="wrap block" style="border-top:none;padding-top:52px">
+    <div class="block-head">
+      <p class="eyebrow">避坑指南 <span class="en">/ PITFALLS</span></p>
+      <h2>让计划失效的，通常是这些事</h2>
+      <p class="lede">下面 20 条按类别整理，每条都给出替代做法。不需要全部做到，但凡是出现在你计划里的，最好先改掉——它们比“多练一次”更能决定结果。</p>
+    </div>
+    <div class="avoid-tabs" id="avoidTabs"></div>
+    <div class="avoid-grid" id="avoidGrid"></div>
+  </div>
+</section>
+
+<!-- ===== 视图：习惯 ===== -->
+<section class="view" data-view="habit" id="v-habit">
+  <div class="wrap block" style="border-top:none;padding-top:52px">
+    <div class="block-head">
+      <p class="eyebrow">日常习惯 <span class="en">/ DAILY HABITS</span></p>
+      <h2>训练只占一小时，剩下 23 小时决定结果</h2>
+      <p class="lede">饮水、步数、纤维、睡眠，这些都被你的体重与热量换算过。它们不是建议，是可以每天打勾的数字。</p>
+    </div>
+
+    <div class="habit-hero">
+      <div class="habit-copy">
+        <p class="eyebrow">最低有效剂量</p>
+        <h2>不需要完美的一天</h2>
+        <p>一天吃满热量、睡够 7 小时、走够步数，就已经完成大部分工作。剩下的是把这三件事重复 16 周。习惯卡住的时候，先保住睡眠和蛋白质，其他都可以往后放。</p>
+        <p class="small" style="margin-top:14px">勾选会按今天日期保存在本机，第二天自动清空重来。</p>
+      </div>
+      <div class="habit-img">
+        <img src="https://aka.doubaocdn.com/s/0B32AMlqEO" alt="浅灰水泥墙前，一名训练者做平板支撑的侧面剪影">
+      </div>
+    </div>
+
+    <div class="habit-cards" id="habitCards"></div>
+
+    <div class="block" style="margin-top:40px;padding-bottom:0">
+      <p class="eyebrow">今日习惯 <span class="en">/ TODAY</span></p>
+      <div class="checklist" id="habitCheck" style="margin-top:6px"></div>
+    </div>
+
+    <div class="block" style="margin-top:40px;padding-bottom:0">
+      <p class="eyebrow">一天怎么过 <span class="en">/ DAY</span></p>
+      <h3>训练日与休息日的时间线</h3>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 视图：记录 ===== -->
+<section class="view" data-view="log" id="v-log">
+  <div class="wrap block" style="border-top:none;padding-top:52px">
+    <div class="block-head">
+      <p class="eyebrow">记录 <span class="en">/ LOG</span></p>
+      <h2>每周一行，才看得到趋势</h2>
+      <p class="lede">体重每天早上都会波动 0.5–1.5 kg。固定在同一时间、同样条件下记录，一周看一次趋势，比每天纠结数字有用。</p>
+    </div>
+
+    <div class="log-grid">
+      <div>
+        <form class="log-form" id="logForm" autocomplete="off">
+          <div class="three">
+            <div>
+              <span class="flabel">日期</span>
+              <div class="num-input"><input id="logDate" type="date" style="font-size:13px"></div>
+            </div>
+            <div>
+              <span class="flabel">体重 <em>kg</em></span>
+              <div class="num-input"><input id="logW" type="number" step="0.1" min="30" max="200" placeholder="67.0"><span class="unit2">kg</span></div>
+            </div>
+            <div>
+              <span class="flabel">腰围 <em>cm · 可选</em></span>
+              <div class="num-input"><input id="logWaist" type="number" step="0.5" min="40" max="170" placeholder="82"><span class="unit2">cm</span></div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button type="submit" class="btn" style="padding:10px 18px">保存记录</button>
+            <span class="small" id="logHint">保存在本机浏览器，不会上传。</span>
+          </div>
+        </form>
+        <div class="log-list" id="logList"></div>
+      </div>
+
+      <aside>
+        <div class="chart-box">
+          <div class="c-head"><span>趋势</span><span id="chartMeta">—</span></div>
+          <svg class="chart-svg" id="chart" viewBox="0 0 320 200" role="img" aria-label="体重与腰围趋势"></svg>
+          <div class="legend-mini">
+            <span><i style="background:var(--ink)"></i>体重 KG</span>
+            <span><i style="background:var(--accent-deep)"></i>腰围 CM</span>
+          </div>
+          <div class="bmi-line"><span>当前 BMI</span><span class="mono" id="bmiNow">—</span></div>
+        </div>
+        <div class="habit">
+          <p class="eyebrow" style="margin-bottom:10px">本周训练打卡</p>
+          <div id="habitList"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap foot-inner">
+    <div class="foot-brand">剂量 DOSE<span>TRAINING &amp; NUTRITION DOSE</span></div>
+    <p class="foot-note">本站内容为一般性训练与营养参考，不构成医疗建议。有心血管、代谢或骨科疾病、正在服药，或处于孕期，请先咨询医生。热量与营养素为估算值，实际以体重与围度变化为准。</p>
+    <div class="foot-links"><a href="#overview">概览</a><a href="#diet">饮食</a><a href="#train">训练</a><a href="#log">记录</a></div>
+  </div>
+</footer>
+
+<script>
+/* ===== 数据与计算 ===== */
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var STORE={profile:'dose.profile.v1',logs:'dose.logs.v1',buy:'dose.buy.v1',habit:'dose.habit.v1',week:'dose.week.v1'};
+var DEFAULTS={sex:'male',age:21,h:161,w:67,waist:null,tw:60,act:1.55,days:4,place:'gym',exp:'trained',goal:'cut',dining:'cook',taboo:[]};
+var GOALS={
+  cut:{key:'cut',name:'减脂',adj:-0.18,protein:2.0,cardio:3,tag:'热量缺口 18%',
+    note:'缺口控制在 18% 左右，配合每公斤体重 2 g 蛋白，尽量保住肌肉的同时减掉腹部脂肪。'},
+  recomp:{key:'recomp',name:'重塑',adj:-0.05,protein:2.2,cardio:2,tag:'接近维持热量',
+    note:'热量略低于维持，靠高蛋白与力量训练改变身体组成。体重变化会很小，重点看腰围和训练重量。'},
+  build:{key:'build',name:'增肌',adj:0.10,protein:1.8,cardio:1,tag:'热量盈余 10%',
+    note:'小幅盈余，控制脂肪增长。每周增重 0.2–0.4 kg 是合理区间，涨太快多半是脂肪。'}
+};
+function load(k,fb){try{var v=localStorage.getItem(k);return v?JSON.parse(v):fb}catch(e){return fb}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function clamp(n,a,b){n=Number(n);if(!isFinite(n))return a;return Math.min(b,Math.max(a,n))}
+function pad(n){return n<10?'0'+n:''+n}
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function fmt(n,d){if(n===null||n===undefined||!isFinite(n))return '—';return Number(n).toFixed(d===undefined?0:d)}
+
+var saved=load(STORE.profile,{});
+var state={
+  profile:Object.assign({},DEFAULTS,saved||{}),
+  view:'overview',dietTab:saved&&saved.goal?saved.goal:'cut',
+  trainDay:0,avoidTab:'全部',
+  logs:load(STORE.logs,[])||[],
+  buy:load(STORE.buy,{})||{},
+  habit:load(STORE.habit,{})||{},
+  week:load(STORE.week,[])||[]
+};
+var C={};/* 计算结果缓存 */
+
+function compute(){
+  var p=state.profile,g=GOALS[p.goal]||GOALS.cut;
+  var w=p.w,h=p.h,age=p.age;
+  var bmr=10*w+6.25*h-5*age+(p.sex==='male'?5:-161);
+  var tdee=bmr*p.act;
+  var raw=tdee*(1+g.adj);
+  var floor=p.sex==='male'?1500:1200;
+  var target=Math.max(raw,floor);
+  var bmi=w/Math.pow(h/100,2);
+  var idealW=24*Math.pow(h/100,2);
+  var refW=bmi>28?idealW:w;
+  var protein=Math.round(refW*g.protein);
+  var fat=Math.max(Math.round(target*0.25/9),Math.round(w*0.55));
+  var carb=Math.round((target-protein*4-fat*9)/4);
+  if(carb<60){carb=60;fat=Math.max(30,Math.round((target-protein*4-carb*4)/9));}
+  var weekly=0;
+  if(p.goal==='cut'){weekly=Math.max(0,(tdee-target)*7/7700);}
+  else if(p.goal==='build'){weekly=Math.max(0,(target-tdee)*7/5500);}
+  var diff=p.tw-w;
+  var weeks=null,dirOK=true;
+  if(p.goal==='cut'){dirOK=diff<0;}
+  else if(p.goal==='build'){dirOK=diff>0;}
+  else {dirOK=true;}
+  if(weekly>0&&dirOK&&Math.abs(diff)>0.2){weeks=Math.ceil(Math.abs(diff)/weekly);}
+  var effectiveTarget=protein*4+carb*4+fat*9;
+  C={bmr:bmr,tdee:tdee,target:Math.round(effectiveTarget),planned:Math.round(target),protein:protein,fat:fat,carb:carb,
+     bmi:bmi,idealW:idealW,proteinPerKg:protein/w,weekly:weekly,diff:diff,weeks:weeks,dirOK:dirOK,
+     goal:g,floor:floor,raw:Math.round(raw),capped:raw<floor};
+}
+
+/* ===== 数据条 ===== */
+function renderBar(){
+  var p=state.profile;
+  $('#dataBar').innerHTML=
+    cell('体重',fmt(p.w,1),'kg')+
+    cell('身高',fmt(p.h,0),'cm')+
+    cell('目标',C.goal.name,'')+
+    '<div class="db-cell is-key"><span class="db-k">每日</span><span class="db-v">'+fmt(C.target)+'</span><span class="db-u">kcal</span></div>'+
+    cell('蛋白',fmt(C.protein),'g')+
+    cell('训练',fmt(p.days),'天/周')+
+    '<button class="db-edit" id="dbEdit">修改数据</button>';
+  $('#dbEdit').addEventListener('click',jumpProfile);
+}
+function cell(k,v,u){return '<div class="db-cell"><span class="db-k">'+k+'</span><span class="db-v">'+v+'</span><span class="db-u">'+u+'</span></div>'}
+
+/* ===== 热量刻度尺（签名元素） ===== */
+function scaleSVG(){
+  var min=1000,max=3400,x0=44,x1=956,y=84;
+  function X(v){return x0+(Math.min(max,Math.max(min,v))-min)/(max-min)*(x1-x0)}
+  var s='';var v,i;
+  for(v=min;v<=max;v+=100){
+    i=(v-min)/100;var big=(i%2===0);
+    s+='<line x1="'+X(v)+'" y1="'+y+'" x2="'+X(v)+'" y2="'+(y-(big?11:5))+'" stroke="rgba(242,241,236,'+(big?'.38':'.2')+')" stroke-width="1"/>';
+  }
+  for(v=1000;v<=3400;v+=400){
+    s+='<text x="'+X(v)+'" y="'+(y+17)+'" text-anchor="middle" fill="rgba(242,241,236,.4)" font-size="9" font-family="IBM Plex Mono, monospace">'+v+'</text>';
+  }
+  s+='<line x1="'+x0+'" y1="'+y+'" x2="'+x1+'" y2="'+y+'" stroke="rgba(242,241,236,.25)" stroke-width="1"/>';
+
+  var bmrX=X(C.bmr),tdX=X(C.tdee),tgX=X(C.target);
+  s+='<line x1="'+bmrX+'" y1="'+(y-34)+'" x2="'+bmrX+'" y2="'+y+'" stroke="rgba(242,241,236,.45)" stroke-width="1" stroke-dasharray="3 3"/>';
+  s+='<circle cx="'+bmrX+'" cy="'+(y-34)+'" r="2.5" fill="rgba(242,241,236,.6)"/>';
+  s+='<text x="'+bmrX+'" y="'+(y-40)+'" text-anchor="middle" fill="rgba(242,241,236,.55)" font-size="9" font-family="IBM Plex Mono, monospace">BMR '+fmt(C.bmr)+'</text>';
+
+  s+='<line x1="'+tdX+'" y1="'+(y-20)+'" x2="'+tdX+'" y2="'+y+'" stroke="rgba(242,241,236,.5)" stroke-width="1" stroke-dasharray="3 3"/>';
+  s+='<circle cx="'+tdX+'" cy="'+(y-20)+'" r="2.5" fill="rgba(242,241,236,.7)"/>';
+  s+='<text x="'+tdX+'" y="'+(y-26)+'" text-anchor="middle" fill="rgba(242,241,236,.6)" font-size="9" font-family="IBM Plex Mono, monospace">TDEE '+fmt(C.tdee)+'</text>';
+
+  var bx=tgX,bw=88;if(bx-bw/2<x0)bx=bw/2+x0;if(bx+bw/2>x1)bx=x1-bw/2;
+  s+='<line x1="'+tgX+'" y1="'+y+'" x2="'+tgX+'" y2="'+(y+9)+'" stroke="#DCEE4B" stroke-width="1"/>';
+  s+='<polygon points="'+(tgX-5)+','+(y+10)+' '+(tgX+5)+','+(y+10)+' '+tgX+','+(y+4)+'" fill="#DCEE4B"/>';
+  s+='<rect x="'+(bx-bw/2)+'" y="'+(y+12)+'" width="'+bw+'" height="22" rx="1" fill="#DCEE4B"/>';
+  s+='<text x="'+bx+'" y="'+(y+27)+'" text-anchor="middle" fill="#171A16" font-size="11" font-weight="600" font-family="IBM Plex Mono, monospace">'+fmt(C.target)+'</text>';
+  return '<svg viewBox="0 0 1000 122" class="dose-scale" role="img" aria-label="每日热量区间">'+s+'</svg>';
+}
+
+/* ===== 结果面板 ===== */
+function renderResult(){
+  var p=state.profile,g=C.goal;
+  var msg='',warn=false;
+  if(C.capped){msg='计算值低于安全下限，已按 '+C.floor+' kcal 处理。不建议再往下减，先把训练和步数做起来。';warn=true;}
+  else if(C.bmi<19&&p.goal==='cut'){msg='按身高体重算，BMI 已低于 19。这个阶段减脂收益很小，建议改成“重塑”，把重点放到训练上。';warn=true;}
+  else if(C.bmi>=28&&p.goal==='build'){msg='BMI 在 28 以上，先减脂再增肌效率更高。可以先把目标改成“减脂”，力量训练照常做。';warn=true;}
+  else if(p.goal==='cut'){msg='每天约 '+fmt(C.tdee-C.target)+' kcal 缺口，按 7700 kcal/kg 估算，每周约 −'+fmt(C.weekly,2)+' kg。';}
+  else if(p.goal==='build'){msg='每天约 '+fmt(C.target-C.tdee)+' kcal 盈余，按 5500 kcal/kg 估算，每周约 +'+fmt(C.weekly,2)+' kg。';}
+  else {msg='热量接近维持水平，体重变化会很小。判断进度看腰围与训练重量，不看体重。';}
+
+  var weeksTxt=(C.weeks?('约 '+C.weeks+' 周'):(C.dirOK&&Math.abs(C.diff)>0.2?'—':'目标体重方向与当前目标不一致'))+'';
+  var bmiTxt=fmt(C.bmi,1)+(C.bmi<18.5?' · 偏瘦':C.bmi<24?' · 正常':C.bmi<28?' · 超重':' · 肥胖');
+
+  $('#resultPanel').innerHTML=
+    '<div class="out-top"><div><span class="out-k">每日目标热量</span><span class="out-v">'+fmt(C.target)+'</span><span class="out-u">kcal</span></div>'+
+    '<div class="out-macros">'+
+      '<div><b>'+fmt(C.protein)+'</b><span>蛋白 G</span></div>'+
+      '<div><b>'+fmt(C.carb)+'</b><span>碳水 G</span></div>'+
+      '<div><b>'+fmt(C.fat)+'</b><span>脂肪 G</span></div>'+
+    '</div></div>'+
+    '<div class="scale-wrap">'+scaleSVG()+
+      '<div class="scale-legend"><span>1000</span><span>基础代谢 '+fmt(C.bmr)+'</span><span>维持 '+fmt(C.tdee)+'</span><span>3400</span></div>'+
+    '</div>'+
+    '<div class="macro-bars"><div class="mbar">'+
+      '<i class="p" style="width:'+(C.protein*4/C.target*100).toFixed(1)+'%"></i>'+
+      '<i class="c" style="width:'+(C.carb*4/C.target*100).toFixed(1)+'%"></i>'+
+      '<i class="f" style="width:'+(C.fat*9/C.target*100).toFixed(1)+'%"></i>'+
+    '</div><div class="mbar-legend">'+
+      '<span><i style="background:var(--accent)"></i>蛋白 '+(C.protein*4/C.target*100).toFixed(0)+'%</span>'+
+      '<span><i style="background:rgba(242,241,236,.82)"></i>碳水 '+(C.carb*4/C.target*100).toFixed(0)+'%</span>'+
+      '<span><i style="background:rgba(242,241,236,.32)"></i>脂肪 '+(C.fat*9/C.target*100).toFixed(0)+'%</span>'+
+    '</div></div>'+
+    '<div class="result-facts">'+
+      rf('基础代谢 BMR',fmt(C.bmr)+' kcal')+
+      rf('维持热量 TDEE',fmt(C.tdee)+' kcal')+
+      rf('蛋白质 / 体重',fmt(C.proteinPerKg,1)+' g/kg')+
+      rf('每周体重变化',(p.goal==='cut'?'−':p.goal==='build'?'+':'')+fmt(C.weekly,2)+' kg')+
+      rf('预计达成目标',weeksTxt)+
+      rf('BMI',bmiTxt)+
+    '</div>'+
+    '<div class="result-msg'+(warn?' is-warn':'')+'">'+msg+'</div>';
+}
+function rf(k,v){return '<div class="rf"><span>'+k+'</span><b>'+v+'</b></div>'}
+
+/* ===== 档案 UI ===== */
+function syncForm(){
+  var p=state.profile;
+  $$('[data-group]').forEach(function(seg){
+    var g=seg.getAttribute('data-group');
+    var key=(g==='place2')?'place':g;
+    $$('button',seg).forEach(function(b){
+      var v=b.getAttribute('data-val');
+      var on=(g==='place2')?(String(p.place)===v):(String(p[key])===v);
+      b.setAttribute('aria-pressed',on?'true':'false');
+    });
+  });
+  setIfIdle('inAge',p.age);setIfIdle('inH',p.h);setIfIdle('inW',p.w);
+  setIfIdle('inWaist',p.waist===null?'':p.waist);setIfIdle('inTW',p.tw);
+  $('#inAct').value=String(p.act);
+}
+function setIfIdle(id,v){var el=$('#'+id);if(el&&document.activeElement!==el)el.value=v}
+
+function persist(){
+  save(STORE.profile,state.profile);
+  var t=$('#saveState');if(t){t.textContent='已保存 · '+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});}
+}
+
+function renderAll(){compute();renderBar();renderResult();renderDiet();renderTrain();renderPlan();renderAvoid();renderHabit();renderLog();}
+
+/* ===== 路由 ===== */
+var VIEWS=['overview','diet','train','plan','avoid','habit','log'];
+function go(v,noScroll){
+  if(VIEWS.indexOf(v)<0)v='overview';
+  state.view=v;
+  $$('.view').forEach(function(s){s.classList.toggle('is-on',s.getAttribute('data-view')===v)});
+  $$('.nav a').forEach(function(a){a.setAttribute('aria-current',a.getAttribute('data-nav')===v?'true':'false')});
+  $('#siteNav').classList.remove('is-open');
+  $('#menuBtn').setAttribute('aria-expanded','false');
+  if(!noScroll){window.scrollTo({top:0,behavior:'auto'});}
+}
+function jumpProfile(){
+  go('overview',true);
+  var el=$('#profileBlock');
+  var top=el.getBoundingClientRect().top+window.pageYOffset-124;
+  window.scrollTo({top:top,behavior:'smooth'});
+  setTimeout(function(){var a=$('#inW');if(a)a.focus({preventScroll:true});},420);
+}
+
+/* ===== 事件绑定 ===== */
+function bindForm(){
+  $$('[data-group]').forEach(function(seg){
+    seg.addEventListener('click',function(e){
+      var b=e.target.closest('button');if(!b)return;
+      var g=seg.getAttribute('data-group'),v=b.getAttribute('data-val');
+      if(g==='days')state.profile.days=Number(v);
+      else if(g==='place2'){state.profile.place=v;state.trainDay=0;}
+      else state.profile[g]=v;
+      if(g==='goal'){state.dietTab=v;}
+      if(g==='sex'||g==='goal'){}
+      persist();syncForm();renderAll();
+    });
+  });
+  var map={
+    inAge:{k:'age',min:14,max:85},
+    inH:{k:'h',min:130,max:220},
+    inW:{k:'w',min:35,max:200},
+    inTW:{k:'tw',min:35,max:200}
+  };
+  Object.keys(map).forEach(function(id){
+    var el=$('#'+id);if(!el)return;
+    var cfg=map[id];
+    el.addEventListener('input',function(){
+      if(el.value==='')return;
+      var v=Number(el.value);
+      if(!isFinite(v)||v<cfg.min||v>cfg.max)return;
+      state.profile[cfg.k]=v;
+      persist();renderAll();
+    });
+    el.addEventListener('blur',function(){
+      var vv=Number(el.value);
+      if(el.value===''||!isFinite(vv))vv=DEFAULTS[cfg.k];
+      state.profile[cfg.k]=Math.min(cfg.max,Math.max(cfg.min,vv));
+      el.value=state.profile[cfg.k];persist();syncForm();renderAll();
+    });
+  });
+  var waist=$('#inWaist');if(waist)
+  waist.addEventListener('input',function(){
+    state.profile.waist=waist.value===''?null:clamp(waist.value,45,170);
+    persist();renderHabit();renderLog();
+  });
+  $('#inAct').addEventListener('change',function(){
+    state.profile.act=Number($('#inAct').value);persist();renderAll();
+  });
+  $('#resetProfile').addEventListener('click',function(){
+    state.profile=Object.assign({},DEFAULTS);state.dietTab='cut';state.trainDay=0;
+    persist();syncForm();renderAll();
+    $('#saveState').textContent='已恢复默认数值';
+  });
+  $$('#dietTabs button').forEach(function(b){
+    b.addEventListener('click',function(){
+      state.profile.goal=b.getAttribute('data-diet');
+      persist();syncForm();renderAll();
+    });
+  });
+  $('#startProfile').addEventListener('click',jumpProfile);
+  $('#menuBtn').addEventListener('click',function(){
+    var nav=$('#siteNav');var open=nav.classList.toggle('is-open');
+    $('#menuBtn').setAttribute('aria-expanded',open?'true':'false');
+  });
+  $$('.nav a').forEach(function(a){
+    a.addEventListener('click',function(e){e.preventDefault();var v=a.getAttribute('data-nav');if(location.hash!=='#'+v){location.hash='#'+v;}else{go(v);}});
+  });
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('a[href^="#"]');
+    if(a&&a.hasAttribute('data-nav'))return;
+    if(a&&VIEWS.indexOf(a.getAttribute('href').slice(1))>=0){e.preventDefault();location.hash=a.getAttribute('href');}
+  });
+  window.addEventListener('hashchange',function(){go(location.hash.replace('#','')||'overview')});
+}
+/* ===== 食物成分（每 100 g 的蛋白 / 碳水 / 脂肪） ===== */
+var F={
+ oats:{n:'燕麦（干重）',p:13,c:66,f:7},
+ egg:{n:'鸡蛋',p:12.6,c:0.7,f:10.6},
+ soy:{n:'无糖豆浆',p:3,c:1.5,f:1.8},
+ berry:{n:'蓝莓',p:0.7,c:14,f:0.3},
+ rice:{n:'糙米饭（熟）',p:2.6,c:26,f:1},
+ chicken:{n:'鸡胸肉（生）',p:23,c:0,f:1.9},
+ broccoli:{n:'西兰花',p:2.8,c:4,f:0.4},
+ oil:{n:'橄榄油',p:0,c:0,f:100},
+ yogurt:{n:'无糖希腊酸奶',p:10,c:4,f:0.5},
+ banana:{n:'香蕉',p:1.3,c:23,f:0.3},
+ almond:{n:'杏仁',p:21,c:22,f:50},
+ salmon:{n:'三文鱼',p:20,c:0,f:13},
+ sweetpotato:{n:'红薯',p:1.6,c:20,f:0.1},
+ spinach:{n:'菠菜',p:2.9,c:3.6,f:0.4},
+ beef:{n:'瘦牛肉',p:26,c:0,f:5},
+ shrimp:{n:'虾仁',p:20,c:1,f:1},
+ tofu:{n:'北豆腐',p:12,c:3,f:7},
+ eggwhite:{n:'蛋清',p:11,c:0.7,f:0.2},
+ kiwi:{n:'猕猴桃',p:1.1,c:14,f:0.5},
+ pepper:{n:'彩椒',p:1,c:6,f:0.2},
+ mixrice:{n:'杂粮饭（熟）',p:3,c:26,f:1},
+ kale:{n:'芥蓝',p:2.5,c:4,f:0.5},
+ apple:{n:'苹果',p:0.3,c:14,f:0.2},
+ whey:{n:'乳清蛋白粉',p:80,c:8,f:4},
+ bread:{n:'全麦面包',p:10,c:45,f:4},
+ pb:{n:'花生酱',p:25,c:20,f:50},
+ thigh:{n:'去皮鸡腿肉',p:20,c:0,f:6},
+ sirloin:{n:'西冷牛排',p:21,c:0,f:15},
+ asparagus:{n:'芦笋',p:2,c:4,f:0.2},
+ walnut:{n:'核桃',p:15,c:14,f:65},
+ corn:{n:'玉米（可食部）',p:4,c:19,f:1.2},
+ milk:{n:'全脂牛奶',p:3.2,c:4.8,f:3.3},
+ tuna:{n:'水浸金枪鱼',p:24,c:0,f:1},
+ chickpea:{n:'鹰嘴豆（熟）',p:8.9,c:27,f:2.6},
+ lentil:{n:'扁豆（熟）',p:9,c:20,f:0.4},
+ edamame:{n:'毛豆（去壳）',p:11,c:9,f:5},
+ soyprotein:{n:'大豆分离蛋白粉',p:80,c:5,f:5}
+};
+/* 食物标签：fish / beef / meat / dairy / egg / plant */
+var TAG={
+ salmon:['fish','meat'],tuna:['fish','meat'],beef:['beef','meat'],sirloin:['beef','meat'],
+ chicken:['meat'],thigh:['meat'],shrimp:['meat'],
+ egg:['egg'],eggwhite:['egg'],
+ yogurt:['dairy'],milk:['dairy'],whey:['dairy'],
+ soy:['plant'],tofu:['plant'],chickpea:['plant'],lentil:['plant'],edamame:['plant'],soyprotein:['plant']
+};
+/* ===== 忌口判定与替换 ===== */
+function tg(k){return TAG[k]||[]}
+function allowed(k){
+  var t=state.profile.taboo||[],g=tg(k);
+  if(t.indexOf('vegetarian')>=0&&(g.indexOf('meat')>=0||g.indexOf('fish')>=0))return false;
+  if(t.indexOf('fish')>=0&&g.indexOf('fish')>=0)return false;
+  if(t.indexOf('beef')>=0&&g.indexOf('beef')>=0)return false;
+  if(t.indexOf('dairy')>=0&&g.indexOf('dairy')>=0)return false;
+  if(t.indexOf('egg')>=0&&g.indexOf('egg')>=0)return false;
+  return true;
+}
+var PROT_POOL=['chicken','thigh','shrimp','egg','eggwhite','soy','yogurt','tofu','whey','soyprotein','chickpea','lentil','edamame','beef','sirloin','salmon','tuna','milk'];
+function pickAlt(key){
+  var list=ALT2[key]||[];
+  for(var i=0;i<list.length;i++){if(allowed(list[i])&&F[list[i]])return list[i];}
+  for(var j=0;j<PROT_POOL.length;j++){var k2=PROT_POOL[j];if(k2!==key&&allowed(k2))return k2;}
+  return null;
+}
+var ALT2={
+ salmon:['shrimp','chicken','thigh','tuna','tofu','egg'],
+ tuna:['shrimp','chicken','thigh','salmon','tofu'],
+ beef:['sirloin','chicken','thigh','shrimp','tofu','egg'],
+ sirloin:['beef','chicken','thigh','shrimp','tofu'],
+ chicken:['thigh','shrimp','egg','tofu'],
+ thigh:['chicken','shrimp','tofu','egg'],
+ shrimp:['chicken','thigh','tofu','egg'],
+ egg:['eggwhite','chicken','tofu','soyprotein'],
+ eggwhite:['egg','chicken','tofu'],
+ yogurt:['soy','milk','whey','soyprotein','tofu'],
+ milk:['soy','yogurt','whey','soyprotein'],
+ whey:['soyprotein','soy','yogurt'],
+ soy:['yogurt','milk','whey','tofu'],
+ tofu:['chickpea','lentil','edamame','egg','soyprotein'],
+ chickpea:['lentil','edamame','tofu'],
+ lentil:['chickpea','edamame','tofu'],
+ edamame:['chickpea','lentil','tofu'],
+ soyprotein:['whey','tofu','edamame']
+};
+
+/* 基准餐单：克数按 67 kg / 约 1750 kcal 写，渲染时按你的目标缩放 */
+var BASE_MEALS=[
+ {name:'早餐',time:'07:00 – 07:30',items:[
+   {f:'oats',g:50,t:'c'},{f:'egg',g:100,t:'p'},{f:'soy',g:250,t:'p'},{f:'berry',g:100,t:'v'}]},
+ {name:'午餐',time:'12:00 – 12:30',items:[
+   {f:'rice',g:150,t:'c'},{f:'chicken',g:150,t:'p'},{f:'broccoli',g:200,t:'v'},{f:'oil',g:8,t:'f'}]},
+ {name:'加餐',time:'15:30 – 16:00',items:[
+   {f:'yogurt',g:150,t:'p'},{f:'banana',g:100,t:'c'},{f:'almond',g:12,t:'f'}]},
+ {name:'晚餐',time:'18:30 – 19:00',items:[
+   {f:'salmon',g:120,t:'p'},{f:'sweetpotato',g:200,t:'c'},{f:'spinach',g:150,t:'v'},{f:'oil',g:5,t:'f'}]}
+];
+var EXTRA_MEAL={name:'睡前',time:'22:00 – 22:30',items:[
+  {f:'yogurt',g:150,t:'p'},{f:'walnut',g:15,t:'f'}]};
+
+var MEALS_CACHE=null;
+function buildPlan(){
+  var goal=C.goal.key;
+  var meals=(goal==='build')?BASE_MEALS.concat([EXTRA_MEAL]):BASE_MEALS;
+  var tot={p:0,c:0,f:0},veg={p:0,c:0,f:0};
+  meals.forEach(function(m){m.items.forEach(function(it){
+    var f=F[it.f],p=it.g/100*f.p,c=it.g/100*f.c,fa=it.g/100*f.f;
+    tot.p+=p;tot.c+=c;tot.f+=fa;
+    if(it.t==='v'){veg.p+=p;veg.c+=c;veg.f+=fa;}
+  })});
+  function ratio(target,base,fix){return base-fix>0.5?(target-fix)/(base-fix):1}
+  var sc={
+    p:ratio(C.protein,tot.p,veg.p),
+    c:ratio(C.carb,tot.c,veg.c),
+    f:ratio(C.fat,tot.f,veg.f)
+  };
+  /* 蛋白类食物自带碳脂，单次缩放闭合不了，迭代收敛到三个目标 */
+  for(var k=0;k<8;k++){
+    var acc={p:veg.p,c:veg.c,f:veg.f};
+    meals.forEach(function(m){m.items.forEach(function(it){
+      if(it.t==='v')return;
+      var f2=F[it.f],g=it.g*sc[it.t];
+      acc.p+=g/100*f2.p;acc.c+=g/100*f2.c;acc.f+=g/100*f2.f;
+    })});
+    var rp=(C.protein-veg.p)/Math.max(0.1,acc.p-veg.p);
+    var rc=(C.carb-veg.c)/Math.max(0.1,acc.c-veg.c);
+    var rf=(C.fat-veg.f)/Math.max(0.1,acc.f-veg.f);
+    if(Math.abs(rp-1)<0.008&&Math.abs(rc-1)<0.008&&Math.abs(rf-1)<0.008)break;
+    sc.p=Math.min(3,Math.max(0.3,sc.p*rp));
+    sc.c=Math.min(3,Math.max(0.3,sc.c*rc));
+    sc.f=Math.min(3,Math.max(0.3,sc.f*rf));
+  }
+  var out=meals.map(function(m){
+    var items=m.items.map(function(it){
+      var key=it.f,f=F[key],g=it.g,swapped=false,orig='';
+      if(it.t!=='v'){
+        g=it.g*sc[it.t];
+        g=(it.t==='f')?Math.max(1,Math.round(g)):Math.max(10,Math.round(g/5)*5);
+      }
+      if(it.t==='p'&&!allowed(key)){
+        var alt=pickAlt(key);
+        if(alt&&alt!==key&&F[alt]&&F[alt].p>0){
+          var f2=F[alt];
+          orig=f.n;
+          g=Math.max(10,Math.round(g*f.p/f2.p/5)*5);
+          f=f2;swapped=true;
+        }
+      }
+      var p=g/100*f.p,c=g/100*f.c,fa=g/100*f.f;
+      return {name:f.n,g:g,t:it.t,p:p,c:c,f:fa,k:p*4+c*4+fa*9,scaled:it.t!=='v',swapped:swapped,orig:orig};
+    });
+    var tot=items.reduce(function(a,b){return {p:a.p+b.p,c:a.c+b.c,f:a.f+b.f,k:a.k+b.k}},{p:0,c:0,f:0,k:0});
+    return {name:m.name,time:m.time,items:items,tot:tot};
+  });
+  /* 取整与替换造成的全天热量偏差，用主食克数兜底 */
+  var sumK=out.reduce(function(a,m){return a+m.tot.k},0);
+  if(sumK>0&&Math.abs(sumK-C.target)>C.target*0.04){
+    var carbK=0;
+    out.forEach(function(m){m.items.forEach(function(it){if(it.t==='c')carbK+=it.k;})});
+    if(carbK>60){
+      var fix=Math.max(0.6,Math.min(1.5,1+(C.target-sumK)/carbK));
+      out.forEach(function(m){
+        m.items.forEach(function(it){
+          if(it.t==='c'&&it.scaled&&it.g>0){
+            var pp=it.p*100/it.g,pc=it.c*100/it.g,pf=it.f*100/it.g;
+            var g2=Math.max(10,Math.round(it.g*fix/5)*5);
+            it.g=g2;it.p=g2*pp/100;it.c=g2*pc/100;it.f=g2*pf/100;
+            it.k=it.p*4+it.c*4+it.f*9;
+          }
+        });
+        m.tot=m.items.reduce(function(a,b){return {p:a.p+b.p,c:a.c+b.c,f:a.f+b.f,k:a.k+b.k}},{p:0,c:0,f:0,k:0});
+      });
+    }
+  }
+  return {meals:out,scale:sc,goal:goal};
+}
+
+function renderDiet(){
+  $('#dietTabs').querySelectorAll('button').forEach(function(b){
+    b.setAttribute('aria-selected',b.getAttribute('data-diet')===state.profile.goal?'true':'false');
+  });
+  $('#dietGoalTag').textContent=C.goal.tag+' · 点击切换会同步更新全站';
+  var plan=buildPlan();
+  var sum=plan.meals.reduce(function(a,m){return {p:a.p+m.tot.p,c:a.c+m.tot.c,f:a.f+m.tot.f,k:a.k+m.tot.k}},{p:0,c:0,f:0,k:0});
+  $('#dKcal').textContent=fmt(sum.k);
+  $('#dP').textContent=fmt(sum.p);
+  $('#dC').textContent=fmt(sum.c);
+  $('#dF').textContent=fmt(sum.f);
+  var pc=sum.p*4/sum.k*100,cc=sum.c*4/sum.k*100,fc=sum.f*9/sum.k*100;
+  $('#dietNote').textContent='蛋白 '+pc.toFixed(0)+'% · 碳水 '+cc.toFixed(0)+'% · 脂肪 '+fc.toFixed(0)+'%。缩放系数：蛋白 ×'+plan.scale.p.toFixed(2)+'，主食 ×'+plan.scale.c.toFixed(2)+'，脂肪 ×'+plan.scale.f.toFixed(2)+'。';
+  var swapped=[];plan.meals.forEach(function(m){m.items.forEach(function(it){if(it.swapped&&swapped.indexOf(it.orig)<0)swapped.push(it.orig);})});
+  var density=fmt(C.proteinPerKg,1)+' g/kg 体重（'+fmt(state.profile.w,1)+' kg → '+fmt(C.protein)+' g/日）。蔬菜不缩放，保持每餐 150–200 g。';
+  if(swapped.length){
+    density+=' 已按忌口替换：'+swapped.join('、')+'。';
+    var gap=Math.round(sum.k-C.target);
+    if(Math.abs(gap)>C.target*0.06)density+=' 替换后合计 '+fmt(sum.k)+' kcal，与目标相差 '+gap+' kcal，主食按比例再减一成即可。';
+  }
+  $('#dietDensity').textContent=density;
+  renderCanteen(plan);
+
+  $('#mealList').innerHTML=plan.meals.map(function(m){
+    return '<div class="meal"><div class="meal-head"><span class="m-name">'+m.name+'</span>'+
+      '<span class="m-time">'+m.time+'</span>'+
+      '<span class="m-kcal"><b>'+fmt(m.tot.k)+'</b> kcal</span></div>'+
+      '<div class="food-head"><span>食物</span><span style="text-align:right">份量</span><span>蛋白</span><span>碳水</span><span>热量</span></div>'+
+      m.items.map(function(it){
+        return '<div class="food-row"><span class="food-name"><i></i>'+it.name+(it.swapped?'<span class="swap-tag">换 · '+it.orig+'</span>':'')+'</span>'+
+        '<span class="food-q">'+fmt(it.g)+' g</span>'+
+        '<span class="food-num">'+fmt(it.p,1)+'</span>'+
+        '<span class="food-num">'+fmt(it.c,1)+'</span>'+
+        '<span class="food-num k">'+fmt(it.k)+'</span></div>';
+      }).join('')+
+    '</div>';
+  }).join('');
+}
+
+function canteenText(name,o){
+  if(name==='早餐'){
+    var a=o.egg?'无糖豆浆 300 ml + 玉米 1 根':'鸡蛋 2 个 + 无糖豆浆 300 ml';
+    return '主食 1 份（包子 / 馒头 100 g）+ '+a;
+  }
+  if(name==='午餐')return o.veg?'豆腐 1 份（约 200 g）+ 米饭半碗 + 绿叶菜 2 份':'米饭半碗（约 100 g 熟）+ 瘦肉 1 份（掌心大，约 100 g）+ 绿叶菜 2 份';
+  if(name==='加餐')return (o.dairy?'豆浆 300 ml 或豆干 1 份':'无糖酸奶 1 杯（150 g）')+' + 水果 1 个';
+  if(name==='晚餐')return o.veg?'杂粮饭半碗 + 豆腐 / 豆制品 1 份 + 蔬菜 2 份':('杂粮饭半碗 + '+(o.fish?'去皮鸡腿 / 牛肉 1 份':'蒸鱼 / 去皮鸡腿 1 份')+' + 蔬菜 2 份');
+  if(name==='睡前')return o.dairy?'豆干 1 份 + 坚果 1 小把':'无糖酸奶 1 杯 + 坚果 1 小把';
+  return '一份主食 + 一份蛋白 + 两份蔬菜';
+}
+function renderCanteen(plan){
+  var box=$('#canteenBox');if(!box)return;
+  if(state.profile.dining!=='canteen'){box.style.display='none';box.innerHTML='';return;}
+  box.style.display='';
+  var t=state.profile.taboo||[];
+  var o={veg:t.indexOf('vegetarian')>=0,fish:t.indexOf('fish')>=0||t.indexOf('vegetarian')>=0,egg:t.indexOf('egg')>=0,dairy:t.indexOf('dairy')>=0};
+  box.innerHTML='<h3>食堂 / 外卖版：按份量打菜</h3>'+
+    '<p class="small" style="margin-top:6px">上面是家庭版克数。没有厨房时，按每餐的热量与蛋白目标在食堂组合：一荤（掌心大瘦肉约 100 g）、两素、主食半份。油多的菜过一下热水，勾芡少打，汤不喝底。</p>'+
+    '<div class="cg">'+plan.meals.map(function(m){
+      return '<div><b>'+m.name+'</b><em>'+fmt(m.tot.k)+' kcal · 蛋白 '+fmt(m.tot.p)+' g</em><p>'+canteenText(m.name,o)+'</p></div>';
+    }).join('')+'</div>';
+}
+
+function renderChecklist(){
+  var items=[
+    ['鸡胸肉','1.5 kg'],['鸡蛋','20 个'],['三文鱼 / 巴沙鱼','800 g'],['瘦牛肉','500 g'],
+    ['糙米 / 杂粮米','1 kg'],['燕麦','500 g'],['红薯','1.5 kg'],['全麦面包','1 袋'],
+    ['西兰花','4 颗'],['菠菜 / 芥蓝','2 把'],['彩椒','4 个'],['冷冻蓝莓','1 袋'],
+    ['无糖希腊酸奶','7 盒'],['无糖豆浆','1 L'],['杏仁 / 核桃','200 g'],['橄榄油','1 瓶']
+  ];
+  var b=state.buy;
+  $('#checklist').innerHTML=items.map(function(it,i){
+    var on=b[mondayStr()+'_'+i]?true:false;
+    return '<div class="check-item" data-on="'+(on?'true':'false')+'" data-i="'+i+'">'+
+      '<span class="box"><svg viewBox="0 0 12 12"><path d="M1 6.5l3 3 7-7"/></svg></span>'+
+      '<span class="co-name">'+it[0]+'</span><span class="co-q">'+it[1]+'</span></div>';
+  }).join('');
+  $$('#checklist .check-item').forEach(function(el){
+    el.addEventListener('click',function(){
+      var key=mondayStr()+'_'+el.getAttribute('data-i');
+      if(state.buy[key])delete state.buy[key];else state.buy[key]=true;
+      el.setAttribute('data-on',state.buy[key]?'true':'false');
+      save(STORE.buy,state.buy);
+    });
+  });
+}
+
+/* ===== 训练动作库 ===== */
+function ex(n,s,rpe,rest,load,tip){return {n:n,s:s,rpe:rpe,rest:rest,load:load,tip:tip}}
+var GYM={
+ PUSH:{id:'A',title:'上肢推',focus:'胸 · 肩 · 三头',ex:[
+   ex('杠铃卧推','4 × 6–8','7–8',150,0.35,'肩胛后收下沉，杠落到乳头连线'),
+   ex('哑铃上斜推','3 × 8–10','8',90,0.15,'30 度上斜，肘不锁死'),
+   ex('坐姿哑铃侧平举','3 × 12–15','8',60,0.05,'肘略低于肩，别耸肩'),
+   ex('绳索下压','3 × 10–12','8',60,null,'大臂夹紧，只动小臂'),
+   ex('面拉','2 × 15','7',60,null,'拉向眉心，肩胛后缩')]},
+ PULL:{id:'B',title:'上肢拉',focus:'背 · 二头 · 后束',ex:[
+   ex('引体向上 / 高位下拉','4 × 6–10','8',120,0.2,'先沉肩再拉，胸口贴杠'),
+   ex('单臂哑铃划船','3 × 10–12','8',90,0.2,'肘往髋部走，不甩腰'),
+   ex('坐姿绳索划船','3 × 10–12','8',90,null,'肩胛先后缩再拉'),
+   ex('哑铃弯举','3 × 10–12','8',60,0.08,'肘固定，不借力'),
+   ex('悬垂举腿','3 × 10–12','8',60,null,'骨盆卷起，不摆腿')]},
+ LEGS:{id:'C',title:'下肢',focus:'股四 · 臀 · 后链',ex:[
+   ex('杠铃深蹲','4 × 5–8','7–8',180,0.5,'膝跟脚尖同向，蹲到大腿平行'),
+   ex('罗马尼亚硬拉','3 × 8–10','7',120,0.4,'髋主导，背始终中立'),
+   ex('腿举','3 × 10–12','8',90,null,'脚掌全贴，别锁膝'),
+   ex('站姿提踵','4 × 12–15','8',60,null,'顶端停 1 秒'),
+   ex('死虫式','3 × 10 / 侧','7',60,null,'腰贴地，对侧伸展')]},
+ CORE:{id:'D',title:'核心 + 有氧',focus:'抗伸展 · 抗旋转 · 二区',ex:[
+   ex('平板支撑','3 × 40 秒','—',45,null,'臀收紧，肋骨下沉'),
+   ex('侧桥','3 × 30 秒 / 侧','—',45,null,'髋推高，身体一条线'),
+   ex('死虫式','3 × 12 / 侧','7',60,null,'慢速，呼气伸展'),
+   ex('农夫走','3 × 30 m','7',90,0.4,'肩下沉，躯干不晃'),
+   ex('二区有氧','25–35 分钟','—',0,null,'能说短句、不能唱歌')]},
+ ARMS:{id:'E',title:'肩 · 臂',focus:'三角肌 · 二头 · 三头',ex:[
+   ex('坐姿杠铃推举','4 × 6–8','7–8',120,0.2,'核心收紧，不后仰'),
+   ex('哑铃侧平举','4 × 12–15','8',60,0.04,'小重量，控制下放'),
+   ex('绳索面拉','3 × 15','7',60,null,'肘高于肩'),
+   ex('绳索下压','3 × 12','8',60,null,'顶峰收缩'),
+   ex('哑铃锤式弯举','3 × 12','8',60,0.06,'不摆动')]},
+ FULLA:{id:'A',title:'全身 A',focus:'蹲 · 推 · 拉',ex:[
+   ex('杠铃深蹲','4 × 6–8','7–8',180,0.5,'主项，放在最前面'),
+   ex('杠铃卧推','4 × 6–8','7–8',150,0.35,'肩胛稳定'),
+   ex('坐姿绳索划船','3 × 10–12','8',90,null,'肩胛后缩'),
+   ex('哑铃侧平举','3 × 12–15','8',60,0.05,'控制离心'),
+   ex('平板支撑','3 × 40 秒','—',45,null,'躯干不塌'),
+   ex('二区有氧','20 分钟','—',0,null,'收尾')]},
+ FULLB:{id:'B',title:'全身 B',focus:'髋 · 推 · 拉',ex:[
+   ex('硬拉','4 × 4–6','7–8',180,0.6,'背中立，贴腿上拉'),
+   ex('哑铃上斜推','4 × 8–10','8',90,0.15,'肩胛后收'),
+   ex('高位下拉','3 × 10–12','8',90,null,'沉肩下拉'),
+   ex('保加利亚分腿蹲','3 × 10 / 腿','8',90,0.15,'前脚踩稳，膝不内扣'),
+   ex('悬垂举腿','3 × 10–12','8',60,null,'骨盆卷起'),
+   ex('二区有氧','20 分钟','—',0,null,'收尾')]},
+ FULLC:{id:'C',title:'全身 C',focus:'腿 · 肩 · 核心',ex:[
+   ex('腿举','4 × 10–12','8',90,null,'控制下放'),
+   ex('坐姿杠铃推举','4 × 6–8','7–8',120,0.2,'核心收紧'),
+   ex('单臂哑铃划船','3 × 10–12','8',90,0.2,'肘往髋走'),
+   ex('罗马尼亚硬拉','3 × 8–10','7',120,0.4,'髋主导'),
+   ex('农夫走','3 × 30 m','7',90,0.4,'不耸肩'),
+   ex('二区有氧','20 分钟','—',0,null,'收尾')]}
+};
+var HOME={
+ PUSH:{id:'A',title:'上肢推',focus:'胸 · 肩 · 三头',ex:[
+   ex('标准俯卧撑','4 × 8–15','8',90,null,'身体一条线，肘向后 45 度'),
+   ex('上斜俯卧撑（手撑高）','3 × 10–15','8',75,null,'适合新手，降低难度'),
+   ex('窄距俯卧撑','3 × 8–12','8',75,null,'肘贴身体'),
+   ex('弹力带侧平举','3 × 15','8',60,null,'踩住弹力带，控制'),
+   ex('凳上臂屈伸','3 × 10–12','8',75,null,'肩不耸，肘向后')]},
+ PULL:{id:'B',title:'上肢拉',focus:'背 · 二头',ex:[
+   ex('弹力带划船','4 × 12–15','8',75,null,'肩胛后缩再拉'),
+   ex('反向划船（桌下 / 低杠）','3 × 8–12','8',90,null,'身体直，胸口触杠'),
+   ex('弹力带高位下拉','3 × 12–15','8',75,null,'沉肩'),
+   ex('弹力带面拉','3 × 15','7',60,null,'拉向眉心'),
+   ex('毛巾弯举 / 弹力带弯举','3 × 12','8',60,null,'肘固定')]},
+ LEGS:{id:'C',title:'下肢',focus:'股四 · 臀 · 后链',ex:[
+   ex('保加利亚分腿蹲','3 × 10 / 腿','8',90,null,'后脚搭椅，前脚踩稳'),
+   ex('徒手深蹲','3 × 20','8',75,null,'蹲到大腿平行'),
+   ex('单腿臀桥','3 × 12 / 腿','8',75,null,'顶端夹臀 1 秒'),
+   ex('单腿提踵','4 × 15 / 腿','8',45,null,'扶墙保持平衡'),
+   ex('死虫式','3 × 10 / 侧','7',60,null,'腰贴地')]},
+ CORE:{id:'D',title:'核心 + 有氧',focus:'抗伸展 · 抗旋转',ex:[
+   ex('平板支撑','3 × 40 秒','—',45,null,'臀收紧，不塌腰'),
+   ex('侧桥','3 × 30 秒 / 侧','—',45,null,'髋推高'),
+   ex('死虫式','3 × 12 / 侧','7',60,null,'慢速控制'),
+   ex('登山跑','3 × 30 秒','8',45,null,'髋不上下晃'),
+   ex('开合跳 / 跳绳','12–15 分钟','—',0,null,'分组做，组间 30 秒')]},
+ CARDIO:{id:'E',title:'有氧间歇',focus:'心肺 · 热量消耗',ex:[
+   ex('原地高抬腿','4 × 40 秒','8',20,null,'膝盖到髋高'),
+   ex('波比跳（可不跳）','4 × 10','8',45,null,'落地轻'),
+   ex('开合跳','4 × 40 秒','8',20,null,'落地缓冲'),
+   ex('登山跑','4 × 30 秒','8',30,null,'核心收紧'),
+   ex('快走 / 爬楼','15–20 分钟','—',0,null,'收尾')]},
+ ARMS:{id:'E',title:'肩 · 臂',focus:'三角肌 · 二头 · 三头',ex:[
+   ex('弹力带推举','4 × 12','8',75,null,'核心收紧'),
+   ex('弹力带侧平举','4 × 15','8',60,null,'控制下放'),
+   ex('窄距俯卧撑','3 × 10–12','8',75,null,'肘贴身体'),
+   ex('凳上臂屈伸','3 × 12','8',75,null,'肩不耸'),
+   ex('毛巾弯举','3 × 15','8',60,null,'顶峰收缩')]},
+ FULLA:{id:'A',title:'全身 A',focus:'腿 · 推 · 核心',ex:[
+   ex('徒手深蹲','4 × 20','8',75,null,'节奏 2 秒下'),
+   ex('标准俯卧撑','4 × 10–15','8',75,null,'身体一条线'),
+   ex('弹力带划船','3 × 15','8',60,null,'肩胛后缩'),
+   ex('平板支撑','3 × 40 秒','—',45,null,'不塌腰'),
+   ex('开合跳','4 × 40 秒','8',20,null,'落地缓冲')]},
+ FULLB:{id:'B',title:'全身 B',focus:'单腿 · 拉 · 核心',ex:[
+   ex('保加利亚分腿蹲','3 × 10 / 腿','8',90,null,'前脚踩稳'),
+   ex('反向划船','3 × 8–12','8',90,null,'胸口触杠'),
+   ex('单腿臀桥','3 × 12 / 腿','8',60,null,'顶端夹臀'),
+   ex('侧桥','3 × 30 秒 / 侧','—',45,null,'髋推高'),
+   ex('登山跑','3 × 30 秒','8',45,null,'核心收紧')]},
+ FULLC:{id:'C',title:'全身 C',focus:'臀 · 肩 · 心肺',ex:[
+   ex('单腿硬拉（徒手）','3 × 12 / 腿','8',75,null,'髋主导，背中立'),
+   ex('弹力带推举','4 × 12','8',75,null,'核心收紧'),
+   ex('窄距俯卧撑','3 × 10–12','8',75,null,'肘贴身体'),
+   ex('死虫式','3 × 12 / 侧','7',60,null,'慢速控制'),
+   ex('跳绳 / 开合跳','10–12 分钟','—',0,null,'分组完成')]}
+};
+var PLACE_NAME={gym:'健身房全套',dumbbell:'只有哑铃',band:'只有弹力带',home:'无器械'};
+var GEAR={
+ gym:['杠铃 + 杠铃片','可调哑铃','训练凳','深蹲架','绳索 / 高位下拉','腿举机','引体杆'],
+ dumbbell:['一对可调哑铃（2–20 kg）','训练凳或稳固椅子','瑜伽垫','可选：引体杆'],
+ band:['弹力带套装（轻 / 中 / 重）','门锚','瑜伽垫','稳固椅子'],
+ home:['稳固椅子','桌沿 / 门框','瑜伽垫','装书的背包（可增重）']
+};
+/* 哑铃动作库 */
+var DB={
+ PUSH:{id:'A',title:'哑铃推',focus:'胸 · 肩 · 三头',ex:[
+   ex('哑铃卧推（凳上 / 地面）','4 × 8–10','7–8',90,0.22,'下放至大臂与地面平行'),
+   ex('哑铃上斜推','3 × 10–12','8',90,0.16,'30 度，肘不锁死'),
+   ex('哑铃侧平举','3 × 12–15','8',60,0.05,'小重量，控制下放'),
+   ex('哑铃颈后臂屈伸','3 × 12','8',60,0.12,'肘朝上，不晃'),
+   ex('俯卧撑','2 × 12–15','8',60,null,'收尾，力竭为止')]},
+ PULL:{id:'B',title:'哑铃拉',focus:'背 · 二头 · 后束',ex:[
+   ex('单臂哑铃划船','4 × 10–12','8',90,0.22,'肘往髋走，不甩腰'),
+   ex('哑铃俯身划船（双侧）','3 × 10–12','8',90,0.18,'背平，肩胛后缩'),
+   ex('哑铃俯身反向飞鸟','3 × 15','8',60,0.05,'小重量，肘微屈'),
+   ex('哑铃弯举','3 × 12','8',60,0.08,'肘固定'),
+   ex('哑铃耸肩','3 × 15','7',60,0.2,'肩向上，不转圈')]},
+ LEGS:{id:'C',title:'哑铃腿',focus:'股四 · 臀 · 后链',ex:[
+   ex('高脚杯深蹲','4 × 8–12','7–8',120,0.25,'哑铃贴胸，蹲到大腿平行'),
+   ex('哑铃罗马尼亚硬拉','3 × 10–12','7',120,0.25,'髋主导，背中立'),
+   ex('保加利亚分腿蹲','3 × 10 / 腿','8',90,0.12,'后脚搭凳，前脚踩稳'),
+   ex('哑铃提踵','4 × 15','8',45,0.12,'顶端停 1 秒'),
+   ex('死虫式','3 × 10 / 侧','7',60,null,'腰贴地')]},
+ CORE:{id:'D',title:'核心 + 有氧',focus:'抗伸展 · 抗旋转',ex:[
+   ex('平板支撑','3 × 40 秒','—',45,null,'臀收紧，不塌腰'),
+   ex('侧桥','3 × 30 秒 / 侧','—',45,null,'髋推高'),
+   ex('哑铃农夫走','3 × 30 m','7',90,0.25,'肩下沉，躯干不晃'),
+   ex('死虫式','3 × 12 / 侧','7',60,null,'慢速控制'),
+   ex('二区有氧','25–30 分钟','—',0,null,'能说短句不能唱歌')]},
+ CARDIO:{id:'E',title:'有氧',focus:'心肺 · 恢复',ex:[
+   ex('快走（可负重背包）','25–30 分钟','—',0,null,'心率 60–70%'),
+   ex('哑铃农夫走','4 × 40 m','7',60,0.25,'不耸肩'),
+   ex('开合跳','4 × 40 秒','8',20,null,'落地缓冲')]}
+};
+/* 弹力带动作用库 */
+var BAND={
+ PUSH:{id:'A',title:'弹力带推',focus:'胸 · 肩 · 三头',ex:[
+   ex('弹力带站姿推胸','4 × 12–15','8',60,null,'带绕背，肘略前'),
+   ex('弹力带肩推','3 × 12','8',60,null,'核心收紧'),
+   ex('弹力带侧平举','3 × 15','8',45,null,'踩住带子，控制'),
+   ex('弹力带下压','3 × 15','8',45,null,'大臂夹紧'),
+   ex('俯卧撑（可跪姿）','3 × 8–15','8',60,null,'身体一条线')]},
+ PULL:{id:'B',title:'弹力带拉',focus:'背 · 二头',ex:[
+   ex('弹力带坐姿划船','4 × 15','8',60,null,'肩胛后缩再拉'),
+   ex('弹力带高位下拉','3 × 15','8',60,null,'沉肩'),
+   ex('弹力带面拉','3 × 15','7',45,null,'拉向眉心'),
+   ex('弹力带弯举','3 × 12–15','8',45,null,'肘固定'),
+   ex('反向划船（桌下）','3 × 8–12','8',75,null,'胸口触杠')]},
+ LEGS:{id:'C',title:'弹力带腿',focus:'股四 · 臀 · 后链',ex:[
+   ex('弹力带深蹲','4 × 15','8',75,null,'膝跟脚尖同向'),
+   ex('弹力带罗马尼亚硬拉','3 × 12–15','7',75,null,'髋主导'),
+   ex('弹力带侧向走','3 × 15 步','8',45,null,'半蹲位，带子绕膝上'),
+   ex('单腿臀桥','3 × 12 / 腿','8',60,null,'顶端夹臀 1 秒'),
+   ex('提踵','4 × 20','8',30,null,'可扶墙')]},
+ CORE:{id:'D',title:'核心 + 有氧',focus:'抗伸展 · 抗旋转',ex:[
+   ex('平板支撑','3 × 40 秒','—',45,null,'不塌腰'),
+   ex('侧桥','3 × 30 秒 / 侧','—',45,null,'髋推高'),
+   ex('死虫式','3 × 12 / 侧','7',60,null,'慢速控制'),
+   ex('弹力带伐木（抗旋转）','3 × 12 / 侧','8',45,null,'转体由核心带动'),
+   ex('开合跳 / 跳绳','10–12 分钟','—',0,null,'分组做')]},
+ CARDIO:{id:'E',title:'有氧间歇',focus:'心肺',ex:[
+   ex('开合跳','4 × 40 秒','8',20,null,'落地缓冲'),
+   ex('原地高抬腿','4 × 40 秒','8',20,null,'膝到髋高'),
+   ex('登山跑','4 × 30 秒','8',30,null,'核心收紧'),
+   ex('快走','15–20 分钟','—',0,null,'收尾')]}
+};
+function mergeDay(id,title,focus,a,b){
+  return {id:id,title:title,focus:focus,ex:a.ex.slice(0,3).concat(b.ex.slice(0,3))};
+}
+function pickSet(LIB){
+  var d=state.profile.days;
+  if(d===5)return [LIB.PUSH,LIB.PULL,LIB.LEGS,LIB.CORE,LIB.CARDIO];
+  if(d===3)return [
+    mergeDay('A','全身 A','腿 · 推 · 核心',LIB.LEGS,LIB.PUSH),
+    mergeDay('B','全身 B','拉 · 腿 · 核心',LIB.PULL,LIB.LEGS),
+    mergeDay('C','全身 C','推 · 拉 · 核心',LIB.PUSH,LIB.PULL)
+  ];
+  return [LIB.PUSH,LIB.PULL,LIB.LEGS,LIB.CORE];
+}
+function planSet(){
+  var pl=state.profile.place,d=state.profile.days;
+  if(pl==='dumbbell')return pickSet(DB);
+  if(pl==='band')return pickSet(BAND);
+  if(pl==='home'){
+    if(d===3)return [HOME.FULLA,HOME.FULLB,HOME.FULLC];
+    if(d===5)return [HOME.PUSH,HOME.PULL,HOME.LEGS,HOME.CORE,HOME.CARDIO];
+    return [HOME.PUSH,HOME.PULL,HOME.LEGS,HOME.CORE];
+  }
+  if(d===3)return [GYM.FULLA,GYM.FULLB,GYM.FULLC];
+  if(d===5)return [GYM.PUSH,GYM.PULL,GYM.LEGS,GYM.ARMS,GYM.CORE];
+  return [GYM.PUSH,GYM.PULL,GYM.LEGS,GYM.CORE];
+}
+function setsOf(s){
+  var str=String(s);if(str.indexOf('×')<0)return 1;
+  var n=Number(str.split('×')[0].trim());
+  return isFinite(n)&&n>0?n:1;
+}
+function repsOf(s){var a=String(s).split('×');return a.length>1?a[1].trim():''}
+function refLoad(ratio){
+  var p=state.profile;if(!ratio)return null;
+  var k=p.exp==='beginner'?0.68:1;
+  var kg=p.w*ratio*k;
+  return Math.max(2.5,Math.round(kg/2.5)*2.5);
+}
+function dayTime(day){
+  var sets=day.ex.reduce(function(a,e){return a+setsOf(e.s)},0);
+  var mins=day.ex.reduce(function(a,e){return e.rest?a+setsOf(e.s)*(Number(e.rest)+45):a},0)/60;
+  return Math.round(mins);
+}
+ function renderTrain(){
+  var plan=planSet();
+  if(state.trainDay>=plan.length)state.trainDay=0;
+  var p=state.profile.place;
+  $$('[data-group="place2"] button').forEach(function(b){
+    b.setAttribute('aria-pressed',b.getAttribute('data-val')===p?'true':'false');
+  });
+  var hint={
+    gym:'需要杠铃、哑铃、绳索与腿举器械，参考负荷按体重估算。',
+    dumbbell:'只需要一对哑铃和一张凳，动作以推、拉、蹲为主。',
+    band:'只需要弹力带与门锚；阻力不用 kg 计量，按次数和张力推进。',
+    home:'无器械自重训练，用椅子、桌沿和背包完成全部动作。'
+  };
+  $('#trainModeHint').textContent=hint[p]||hint.gym;
+  if($('#gearList'))$('#gearList').innerHTML='<span>需要</span>'+(GEAR[p]||GEAR.gym).map(function(g){return '<span>'+g+'</span>'}).join('');
+
+  $('#trainDays').innerHTML=plan.map(function(d,i){
+    return '<button class="day-btn" data-i="'+i+'" aria-pressed="'+(i===state.trainDay?'true':'false')+'">'+
+      '<span class="d-k">DAY '+d.id+'</span><span class="d-n">'+d.title+'</span><span class="d-f">'+d.focus+'</span></button>';
+  }).join('');
+  $$('#trainDays .day-btn').forEach(function(b){
+    b.addEventListener('click',function(){state.trainDay=Number(b.getAttribute('data-i'));renderTrain();});
+  });
+
+  var day=plan[state.trainDay];
+  var timed=dayTime(day);
+  $('#dayFocus').textContent='DAY '+day.id+' / '+day.focus;
+  $('#dayTitle').textContent=day.title;
+  $('#dayMeta').innerHTML='约 '+timed+' 分钟 · '+day.ex.length+' 个动作 · '+state.profile.days+' 天分化<br>'+state.profile.w+' kg · '+(state.profile.exp==='beginner'?'新手减一组':'有基础');
+
+  $('#exTable').innerHTML='<div class="ex-head"><span>动作</span><span>组 × 次</span><span>RPE</span><span>参考负荷</span><span>休息</span></div>'+
+    day.ex.map(function(e){
+      var sets=setsOf(e.s);
+      if(state.profile.exp==='beginner'&&sets>2&&e.rest>0)sets-=1;
+      var reps=repsOf(e.s);
+      var kg=refLoad(e.load);
+      var loadTxt=kg?(kg+' kg<small>'+Math.round(e.load*100)+'% 体重</small>'):((p==='band')?'<span style="color:var(--muted)">弹力带 / 自重</span>':'<span style="color:var(--muted)">自重</span>');
+      return '<div class="ex-row"><div><div class="ex-n">'+e.n+'</div><div class="ex-t">'+e.tip+'</div></div>'+
+        '<span class="ex-s">'+sets+' × '+reps+'</span>'+
+        '<span class="ex-r">'+e.rpe+'</span>'+
+        '<span class="ex-load">'+loadTxt+'</span>'+
+        '<span class="ex-rest">'+(e.rest?e.rest+' 秒':'—')+'</span></div>';
+    }).join('');
+  renderChecklist();
+}
+/* ===== 周安排 ===== */
+var DAYNAMES=['周一','周二','周三','周四','周五','周六','周日'];
+var SLOTS={3:[0,2,4],4:[0,2,4,5],5:[0,1,3,4,5]};
+function stepsGoal(){return C.goal.key==='cut'?10000:8000}
+function cardioMin(){return C.goal.key==='cut'?30:C.goal.key==='build'?20:25}
+function renderPlan(){
+  var plan=planSet();
+  var slots=SLOTS[state.profile.days]||SLOTS[4];
+  var rows=[];var tr=0;
+  var restIdx=[0,1,2,3,4,5,6].filter(function(i){return slots.indexOf(i)<0});
+  var cardioIdx=restIdx.slice(0,Math.max(1,C.goal.cardio));
+  for(var i=0;i<7;i++){
+    if(slots.indexOf(i)>=0){
+      var d=plan[tr]||plan[0];tr++;
+      rows.push({tag:'train',label:'训练',title:d.title,note:d.focus,dur:'约 '+dayTime(d)+' 分钟'});
+    }else if(cardioIdx.indexOf(i)>=0){
+      rows.push({tag:'cardio',label:'有氧',title:'二区有氧 '+cardioMin()+' 分钟',note:'心率 60–70% · 快走 / 单车 / 椭圆机',dur:'约 '+cardioMin()+' 分钟'});
+    }else{
+      rows.push({tag:'rest',label:'休息',title:'完全休息 / 步行',note:'睡够 8 小时 · 日常走动 6000 步',dur:'—'});
+    }
+  }
+  $('#weekTable').innerHTML=rows.map(function(r,i){
+    return '<div class="week-row"><span class="w-d">'+DAYNAMES[i]+'</span>'+
+      '<span class="w-tag '+r.tag+'">'+r.label+'</span>'+
+      '<span class="w-t">'+r.title+'</span>'+
+      '<span class="w-n">'+r.note+'</span>'+
+      '<span class="w-s">'+r.dur+'</span></div>';
+  }).join('');
+
+  var totalSets=plan.reduce(function(a,d){return a+d.ex.reduce(function(b,e){
+    var sets=setsOf(e.s);return b+(state.profile.exp==='beginner'&&sets>2&&e.rest>0?sets-1:sets)},0)},0);
+  var totalTime=plan.reduce(function(a,d){return a+dayTime(d)},0)+cardioIdx.length*cardioMin();
+  $('#planStat').innerHTML=
+    '<div><b>'+totalSets+'</b><span>力量组 / 周</span></div>'+
+    '<div><b>'+cardioIdx.length+' × '+cardioMin()+'</b><span>有氧 分钟</span></div>'+
+    '<div><b>'+Math.round(totalTime/60*10)/10+'</b><span>小时 / 周</span></div>'+
+    '<div><b>'+stepsGoal()+'</b><span>步 / 日</span></div>';
+}
+
+/* ===== 避坑 ===== */
+var PITFALLS=[
+ {cat:'饮食',t:'不吃主食',d:'碳水骤降会先掉水分和糖原，体重掉得快，但训练重量随之下降，肌肉也跟着流失。',fix:'主食保留，优先放在训练前后两餐。'},
+ {cat:'饮食',t:'只吃水煮菜和鸡胸',d:'脂肪过低会影响激素水平，长期会出现精力差、情绪低落、睡眠变浅。',fix:'脂肪保持在总热量的 20–30%，约每天 45–60 g。'},
+ {cat:'饮食',t:'用代餐替代正餐',d:'代餐饱腹感差、蛋白质质量参差，很容易在晚上补回来，且无法长期执行。',fix:'最多替代一餐，其余用真实食物。'},
+ {cat:'饮食',t:'蛋白粉当饭吃',d:'蛋白粉只有蛋白质，缺少蔬菜的纤维与微量营养素，也会让一餐的热量难以估算。',fix:'蛋白粉只做补充，正餐仍以食物为主。'},
+ {cat:'饮食',t:'迷信零脂、无糖食品',d:'零脂常以糖补味，无糖常以脂肪补口感，总热量未必更低。',fix:'看营养成分表的每 100 g 热量与蛋白，而不是包装正面。'},
+ {cat:'饮食',t:'果汁、奶茶当水喝',d:'一杯全糖奶茶可达 400–600 kcal，等于把一整天的缺口一次喝掉，而且几乎不产生饱腹感。',fix:'换纯茶、气泡水或黑咖啡，每天液体热量控制在 0。'},
+ {cat:'训练',t:'只练腹，不做全身',d:'卷腹的热量消耗极低，也无法局部减脂；只练腹会让腹部肌肉变厚，但被脂肪盖住。',fix:'以深蹲、硬拉、卧推、划船等复合动作为主，核心放最后。'},
+ {cat:'训练',t:'天天练同一肌群',d:'肌肉在训练中破坏、在休息中增长。同一肌群连着练，恢复不足，重量上不去。',fix:'同一肌群间隔 48 小时，每周 2 次足够。'},
+ {cat:'训练',t:'重量太轻，从不接近力竭',d:'每组都留 8 次余力，身体没有理由增长。舒适区的训练只能消耗热量，难以改变体型。',fix:'主项做到 RPE 7–8，最后一组留 2–3 次余力。'},
+ {cat:'训练',t:'忽略复合动作，只做器械孤立',d:'孤立动作对单块肌肉有效，但总负荷低、协调性收益小，新手先练复合动作效率更高。',fix:'每次训练先做 1–2 个复合动作，再做孤立。'},
+ {cat:'训练',t:'有氧过量，力量被挤掉',d:'每天 60 分钟以上有氧会明显影响恢复，力量下降后肌肉流失加快，基础代谢也会降低。',fix:'减脂期有氧每周 2–3 次、每次 25–35 分钟，放在力量之后。'},
+ {cat:'训练',t:'不记录重量和次数',d:'没有记录就没有渐进超负荷，三周后你无法判断自己是否进步，也无法判断计划是否有效。',fix:'用手机备忘录记下每个动作的重量与次数，每次加一点。'},
+ {cat:'恢复',t:'长期睡不足 6 小时',d:'睡眠不足会升高皮质醇、降低胰岛素敏感性，让同样的缺口更容易掉肌肉、更容易饿。',fix:'固定入睡时间，保证 7–9 小时；训练日尤其不要熬夜。'},
+ {cat:'恢复',t:'训练后完全不走路',d:'低强度活动能促进血流与恢复，也能增加每日总消耗，比额外加一次高强度训练更安全。',fix:'训练后走 10 分钟，每天补到 8000 步以上。'},
+ {cat:'恢复',t:'带着疼痛硬练',d:'关节的刺痛、麻木、夜间痛与肌肉酸痛不同，继续训练会把小问题变成慢性损伤。',fix:'出现刺痛立即停该动作，换无痛角度；持续一周就医。'},
+ {cat:'恢复',t:'用酒精助眠',d:'酒精会破坏深睡眠结构，降低蛋白合成效率，第二天训练表现和食欲控制都会变差。',fix:'训练日与减脂期尽量不喝；喝则计入当天热量。'},
+ {cat:'心态',t:'一周没变化就换计划',d:'体重受水分、盐分、排便影响，一周的波动说明不了任何问题，频繁换计划只会让数据失去可比性。',fix:'同一个计划至少执行 4 周，每周只对比周均值。'},
+ {cat:'心态',t:'每天称重并据此改饮食',d:'日波动可达 1–2 kg，据此调整热量会让计划剧烈摇摆，反而更容易暴食。',fix:'每周固定一天、早晨空腹称重，看趋势线。'},
+ {cat:'心态',t:'追求一个月瘦十斤',d:'快速减重的部分多是水分与肌肉，围度改善有限，且基础代谢下降，反弹概率更高。',fix:'按每周 0.5–1% 体重的速度减，慢就是快。'},
+ {cat:'心态',t:'买装备代替开始训练',d:'装备带来的行动感很快消失，真正决定结果的是第一周就完成三次训练。',fix:'先用现有条件练两周，再补需要的器械。'},
+ {cat:'饮食',t:'食堂打菜不看做法',d:'同样是"一荤两素"，红烧、糖醋、油炸、勾芡的菜热量能翻一倍，油和糖都藏在酱汁里。',fix:'优先蒸、煮、炖、清炒；荤菜选去皮鸡腿、瘦肉、鱼；勾芡菜过一遍热水，汤别喝底。'},
+ {cat:'训练',t:'器械不全就直接放弃',d:'没有杠铃就以为练不了，其实哑铃和弹力带同样能做渐进超负荷，关键在张力或次数是否在推进。',fix:'按器械档位换动作，记录每组次数，每周加 1–2 次或换更粗的带子。'}
+];
+function renderAvoid(){
+  var cats=['全部','饮食','训练','恢复','心态'];
+  $('#avoidTabs').innerHTML=cats.map(function(c){
+    return '<button data-cat="'+c+'" aria-selected="'+(state.avoidTab===c?'true':'false')+'">'+c+'</button>';
+  }).join('');
+  $$('#avoidTabs button').forEach(function(b){
+    b.addEventListener('click',function(){state.avoidTab=b.getAttribute('data-cat');renderAvoid();});
+  });
+  var list=PITFALLS.filter(function(p){return state.avoidTab==='全部'||p.cat===state.avoidTab});
+  $('#avoidGrid').innerHTML=list.map(function(p,i){
+    return '<div class="avoid"><span class="a-n">'+pad(i+1)+'</span><div><h4>'+p.t+'</h4><p>'+p.d+'</p>'+
+      '<div class="fix"><b>改成</b><span>'+p.fix+'</span></div></div></div>';
+  }).join('');
+}
+
+/* ===== 习惯 ===== */
+function habitValues(){
+  var p=state.profile;
+  return {
+    water:Math.round(p.w*35/50)*50,
+    protein:C.protein,
+    fiber:Math.round(C.target*14/1000/5)*5,
+    steps:stepsGoal(),
+    sleep:'7–9',
+    caffeine:Math.min(400,Math.round(p.w*3/50)*50),
+    train:p.days,
+    waist:p.waist?p.waist:null
+  };
+}
+function renderHabit(){
+  var v=habitValues();
+  var cards=[
+    ['饮水',v.water,'ml / 日','训练日再加 500 ml，少量多次'],
+    ['蛋白质',v.protein,'g / 日','分 3–4 餐，每餐 30–40 g'],
+    ['膳食纤维',v.fiber,'g / 日','蔬菜 400 g + 全谷 / 豆类'],
+    ['步数',v.steps,'步 / 日','训练之外的日常活动'],
+    ['睡眠',v.sleep,'小时','固定入睡与起床时间'],
+    ['咖啡因','≤'+v.caffeine,'mg / 日','下午 2 点后不再摄入'],
+    ['训练',v.train,'次 / 周','同一肌群间隔 48 小时'],
+    ['测量','1','次 / 周','固定时间量体重与腰围']
+  ];
+  $('#habitCards').innerHTML=cards.map(function(c){
+    return '<div class="hcard"><span class="k">'+c[0]+'</span><b>'+c[1]+'<small>'+c[2]+'</small></b><p>'+c[3]+'</p></div>';
+  }).join('');
+
+  if(!state.habit||state.habit.date!==todayStr())state.habit={date:todayStr(),on:{}};
+  save(STORE.habit,state.habit);
+  var list=[
+    ['喝够 '+v.water+' ml 水','约 '+(Math.round(v.water/250))+' 杯'],
+    ['吃够 '+v.protein+' g 蛋白质','约 '+Math.round(v.protein/35)+' 餐蛋白'],
+    ['走够 '+v.steps+' 步','含训练日'],
+    ['睡满 7 小时','固定时间'],
+    ['每餐一份蔬菜','150–200 g'],
+    [C.goal.key==='build'?'完成当日训练或加餐':'完成当日训练或有氧','按周安排'],
+    ['睡前 1 小时不看屏幕','提高深睡比例'],
+    ['记录体重或腰围','每周一次']
+  ];
+  $('#habitCheck').innerHTML=list.map(function(it,i){
+    var on=state.habit.on[i]?true:false;
+    return '<div class="check-item" data-on="'+(on?'true':'false')+'" data-i="'+i+'">'+
+      '<span class="box"><svg viewBox="0 0 12 12"><path d="M1 6.5l3 3 7-7"/></svg></span>'+
+      '<span class="co-name">'+it[0]+'</span><span class="co-q">'+it[1]+'</span></div>';
+  }).join('');
+  $$('#habitCheck .check-item').forEach(function(el){
+    el.addEventListener('click',function(){
+      var i=el.getAttribute('data-i');
+      if(state.habit.on[i])delete state.habit.on[i];else state.habit.on[i]=true;
+      el.setAttribute('data-on',state.habit.on[i]?'true':'false');
+      save(STORE.habit,state.habit);
+    });
+  });
+
+  var pre=C.goal.key==='build'?'训练前 60 分钟：全麦面包 1 片 + 香蕉 1 根':'训练前 60 分钟：香蕉 1 根（可选）';
+  var rows=[
+    ['07:00','起床 · 喝 300–500 ml 水','唤醒代谢，先补水再喝咖啡'],
+    ['07:30','早餐 · '+Math.round(C.protein*0.3)+' g 蛋白','一天中蛋白利用率最高的一餐'],
+    ['10:30','起身走动 10 分钟','久坐会让下午更容易犯困'],
+    ['12:30','午餐 · '+Math.round(C.protein*0.3)+' g 蛋白','先吃蔬菜再吃主食'],
+    ['16:30',pre,'距离训练至少 60 分钟'],
+    ['17:30','力量训练 · 约 '+dayTime(planSet()[0])+' 分钟','主项在前，核心最后'],
+    ['19:00','晚餐 · '+Math.round(C.protein*0.3-5)+' g 蛋白','训练后 2 小时内完成'],
+    ['22:30','睡前加餐 / 拉伸 10 分钟','增肌档补一份酸奶'],
+    ['23:00','睡眠 · 目标 7–9 小时','固定入睡时间比睡够更重要']
+  ];
+  $('#timeline').innerHTML=rows.map(function(r,i){
+    return '<div class="tl-row'+(i===5?' is-key':'')+'"><span class="tl-t">'+r[0]+'</span><span class="tl-n">'+r[1]+'</span><span class="tl-d">'+r[2]+'</span></div>';
+  }).join('');
+
+  renderEntryLinks();
+}
+
+/* ===== 入口卡 ===== */
+function renderEntryLinks(){
+  var v=habitValues();
+  var cards=[
+    {href:'#diet',k:'DIET / 01',t:'饮食计划',d:'每日 '+fmt(C.target)+' kcal，蛋白 '+fmt(C.protein)+' g；份量按体重折算，忌口与食堂自动换方案。'},
+    {href:'#train',k:'TRAIN / 02',t:'训练计划',d:state.profile.days+' 天分化 · '+(PLACE_NAME[state.profile.place]||'健身房全套')+'动作库 · 参考负荷按体重估算。'},
+    {href:'#plan',k:'PLAN / 03',t:'安排计划',d:'一周七天排到具体日期，训练、有氧、休息分开。'},
+    {href:'#avoid',k:'AVOID / 04',t:'避坑指南',d:PITFALLS.length+' 条最常见的错误，每条给出替代做法。'},
+    {href:'#habit',k:'HABIT / 05',t:'日常习惯',d:'饮水 '+v.water+' ml、步数 '+v.steps+'、睡眠 7–9 小时。'},
+    {href:'#log',k:'LOG / 06',t:'记录',d:'每周一行，看体重与腰围的趋势，不被单日波动影响。'}
+  ];
+  $('#entryLinks').innerHTML=cards.map(function(c){
+    return '<a class="entry" href="'+c.href+'"><div><span class="k">'+c.k+'</span><h3>'+c.t+'</h3><p>'+c.d+'</p></div>'+
+      '<div class="go"><span>进入</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div></a>';
+  }).join('');
+}
+
+/* ===== 记录 ===== */
+function renderLog(){
+  var logs=state.logs.slice().sort(function(a,b){return a.date<b.date?-1:1});
+  var list=logs.slice().reverse();
+  var hint=$('#logHint');
+  $('#logList').innerHTML=list.length?list.map(function(l,idx){
+    var prev=list[idx+1];
+    var d=(prev&&prev.w)?(l.w-prev.w):null;
+    var dTxt=d===null?'':((d>0?'+':'')+fmt(d,1)+' kg');
+    return '<div class="log-item"><span class="l-d">'+l.date.slice(5)+'</span>'+
+      '<span class="l-v">'+fmt(l.w,1)+'<small>kg</small></span>'+
+      '<span class="l-v">'+(l.waist?fmt(l.waist,1)+'<small>cm</small>':'<small>—</small>')+'</span>'+
+      '<span class="l-delta">'+dTxt+'</span>'+
+      '<button class="l-del" data-date="'+l.date+'" aria-label="删除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/></svg></button></div>';
+  }).join(''):'<div class="empty">还没有记录。填一行今天的体重与腰围，趋势会从这里开始。</div>';
+  $$('#logList .l-del').forEach(function(b){
+    b.addEventListener('click',function(){
+      var date=b.getAttribute('data-date');
+      state.logs=state.logs.filter(function(l){return l.date!==date});
+      save(STORE.logs,state.logs);renderLog();
+    });
+  });
+
+  var latest=list[0];
+  var bmi=latest?latest.w/Math.pow(state.profile.h/100,2):C.bmi;
+  $('#bmiNow').textContent=fmt(bmi,1)+(bmi<18.5?' 偏瘦':bmi<24?' 正常':bmi<28?' 超重':' 肥胖');
+  $('#chartMeta').textContent=list.length?list.length+' 条记录':'暂无';
+  drawChart(logs);
+
+  var plan=planSet();var wk=mondayStr();
+  if(!state.week||state.week.wk!==wk)state.week={wk:wk,on:{}};
+  $('#habitList').innerHTML=plan.map(function(d){
+    var on=state.week.on[d.id]?true:false;
+    return '<div class="habit-row" data-on="'+(on?'true':'false')+'" data-id="'+d.id+'">'+
+      '<span><span class="h-n">DAY '+d.id+' · '+d.title+'</span><br><span class="h-s">'+d.focus+'</span></span>'+
+      '<span class="habit-box"><svg viewBox="0 0 12 12"><path d="M1 6.5l3 3 7-7"/></svg></span></div>';
+  }).join('');
+  $$('#habitList .habit-row').forEach(function(el){
+    el.addEventListener('click',function(){
+      var id=el.getAttribute('data-id');
+      if(state.week.on[id])delete state.week.on[id];else state.week.on[id]=true;
+      el.setAttribute('data-on',state.week.on[id]?'true':'false');
+      save(STORE.week,state.week);
+    });
+  });
+}
+function mondayStr(){
+  var d=new Date();var day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+function drawChart(logs){
+  var svg=$('#chart');
+  if(!logs.length){
+    svg.innerHTML='<line x1="34" y1="170" x2="306" y2="170" stroke="#D8D5CB" stroke-width="1"/>'+
+      '<text x="170" y="96" text-anchor="middle" font-size="10" fill="#8B8C82" font-family="IBM Plex Mono, monospace">记录两条以上，才会出现趋势</text>';
+    return;
+  }
+  var W=320,H=200,pl=34,pr=12,pt=22,pb=28;
+  var n=logs.length;
+  function X(i){return n===1?(pl+(W-pl-pr)/2):(pl+i/(n-1)*(W-pl-pr))}
+  function series(key){
+    var arr=logs.filter(function(l){return l[key]})
+      .map(function(l){return {x:logs.indexOf(l),v:l[key]}});
+    return arr;
+  }
+  var sw=series('w'),sa=series('waist');
+  var s='';
+  for(var gy=0;gy<4;gy++){
+    var yy=pt+(H-pt-pb)*gy/3;
+    s+='<line x1="'+pl+'" y1="'+yy+'" x2="'+(W-pr)+'" y2="'+yy+'" stroke="#E1DFD6" stroke-width="1"/>';
+  }
+  function scale(arr){
+    if(!arr.length)return null;
+    var mn=Math.min.apply(null,arr.map(function(p){return p.v}));
+    var mx=Math.max.apply(null,arr.map(function(p){return p.v}));
+    if(mx-mn<0.6){mn-=0.4;mx+=0.4;}
+    return {mn:mn,mx:mx};
+  }
+  function Y(v,sc){return pt+(1-(v-sc.mn)/(sc.mx-sc.mn))*(H-pt-pb)}
+  var scW=scale(sw),scA=scale(sa);
+  if(scW){
+    s+='<polyline fill="none" stroke="#171A16" stroke-width="1.6" points="'+sw.map(function(p){return X(p.x)+','+Y(p.v,scW)}).join(' ')+'"/>';
+    s+=sw.map(function(p){return '<circle cx="'+X(p.x)+'" cy="'+Y(p.v,scW)+'" r="2.6" fill="#171A16"/>'}).join('');
+    s+='<text x="'+pl+'" y="'+(Y(scW.mx,scW)-6)+'" font-size="8.5" fill="#8B8C82" font-family="IBM Plex Mono, monospace">'+fmt(scW.mx,1)+'</text>';
+    s+='<text x="'+pl+'" y="'+(Y(scW.mn,scW)+11)+'" font-size="8.5" fill="#8B8C82" font-family="IBM Plex Mono, monospace">'+fmt(scW.mn,1)+'</text>';
+  }
+  if(scA){
+    s+='<polyline fill="none" stroke="#B9CE22" stroke-width="1.4" stroke-dasharray="4 3" points="'+sa.map(function(p){return X(p.x)+','+Y(p.v,scA)}).join(' ')+'"/>';
+    s+=sa.map(function(p){return '<circle cx="'+X(p.x)+'" cy="'+Y(p.v,scA)+'" r="2.2" fill="#B9CE22"/>'}).join('');
+  }
+  s+='<text x="'+pl+'" y="'+(H-8)+'" font-size="8" fill="#8B8C82" font-family="IBM Plex Mono, monospace">'+logs[0].date.slice(5)+'</text>';
+  if(n>1)s+='<text x="'+(W-pr)+'" y="'+(H-8)+'" text-anchor="end" font-size="8" fill="#8B8C82" font-family="IBM Plex Mono, monospace">'+logs[n-1].date.slice(5)+'</text>';
+  svg.innerHTML=s;
+}
+
+/* ===== 记录表单 ===== */
+function bindLog(){
+  $('#logDate').value=todayStr();
+  $('#logForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var date=$('#logDate').value||todayStr();
+    var w=Number($('#logW').value);
+    var waist=$('#logWaist').value===''?null:Number($('#logWaist').value);
+    if(!isFinite(w)||w<30||w>200){$('#logHint').textContent='请填 30–200 之间的体重。';return;}
+    var exists=state.logs.filter(function(l){return l.date!==date});
+    exists.push({date:date,w:Math.round(w*10)/10,waist:waist?Math.round(waist*10)/10:null});
+    state.logs=exists;
+    save(STORE.logs,state.logs);
+    state.profile.w=Math.round(w*10)/10;
+    persist();syncForm();
+    $('#logHint').textContent='已保存（同时更新了档案体重）';
+    $('#logW').value='';$('#logWaist').value='';
+    renderAll();
+  });
+}
+
+/* ===== 忌口选项 ===== */
+var TABOO_OPTS=[['fish','不吃鱼'],['beef','不吃牛肉'],['dairy','不吃乳制品'],['egg','不吃鸡蛋'],['vegetarian','素食']];
+function renderTaboo(){
+  var row=$('#tabooRow');if(!row)return;
+  var t=state.profile.taboo||[];
+  row.innerHTML=TABOO_OPTS.map(function(o){
+    var on=t.indexOf(o[0])>=0;
+    return '<button type="button" class="pick" data-taboo="'+o[0]+'" aria-pressed="'+(on?'true':'false')+'">'+o[1]+'</button>';
+  }).join('');
+  $$('#tabooRow .pick').forEach(function(b){
+    b.addEventListener('click',function(){
+      var k=b.getAttribute('data-taboo');
+      var t2=(state.profile.taboo||[]).slice();
+      var i=t2.indexOf(k);
+      if(i>=0)t2.splice(i,1);else t2.push(k);
+      if(k==='vegetarian'&&i<0)t2=t2.filter(function(x){return x!=='fish'&&x!=='beef'});
+      state.profile.taboo=t2;
+      persist();renderTaboo();renderAll();
+    });
+  });
+}
+
+/* ===== 启动 ===== */
+function num(v,fb,min,max){var n=Number(v);if(!isFinite(n))n=fb;return Math.min(max,Math.max(min,n))}
+function sanitize(){
+  var p=state.profile,d=DEFAULTS;
+  p.age=num(p.age,d.age,14,85);p.h=num(p.h,d.h,130,220);p.w=num(p.w,d.w,35,200);
+  p.tw=num(p.tw,d.tw,35,200);p.act=num(p.act,d.act,1.1,2.0);
+  p.days=[3,4,5].indexOf(Number(p.days))>=0?Number(p.days):4;
+  if(!GOALS[p.goal])p.goal='cut';
+  if(['gym','dumbbell','band','home'].indexOf(p.place)<0)p.place='gym';
+  if(p.dining!=='canteen')p.dining='cook';
+  p.taboo=Array.isArray(p.taboo)?p.taboo.filter(function(x){return ['fish','beef','dairy','egg','vegetarian'].indexOf(x)>=0}):[];
+  if(p.exp!=='beginner')p.exp='trained';
+  if(p.waist!==null&&!isFinite(Number(p.waist)))p.waist=null;
+}
+function init(){
+  sanitize();compute();syncForm();bindForm();bindLog();renderTaboo();
+  go(location.hash.replace('#','')||'overview',true);
+  renderAll();
+  var t=$('#saveState');if(t)t.textContent='档案自动保存在本机浏览器';
+}
+init();
+})();
+</script>
+</body>
+</html>
